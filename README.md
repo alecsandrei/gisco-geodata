@@ -1,4 +1,4 @@
-Download geodata using the GISCO API.
+Can be used to download geodata from the GISCO API.
 
 [currently under development, functionality is limited]
 
@@ -7,8 +7,12 @@ Download geodata using the GISCO API.
 ```sh
 git clone https://github.com/alecsandrei/gisco-geodata.git
 cd gisco-geodata
-pip install .
+python3 -m pip install .
 ```
+
+# Requirements
+- requests
+- Python >= 3.9
 
 # Example
 ```python
