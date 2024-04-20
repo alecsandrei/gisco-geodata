@@ -1,0 +1,33 @@
+[project]
+name = "gisco-geodata"
+version = "0.1.0"
+dependencies=["requests"]
+description = "GISCO Geodata is a Python package that provides access to the European Commission's GISCO geospatial data."
+readme = "README.md"
+requires-python = ">=3.9"
+keywords = [
+    "gisco-geodata",
+]
+license = {text = "MIT"}
+authors = [
+  {name = "Alex-Andrei Cuvuliuc", email = "cuvuliucalexandrei@gmail.com"},
+]
+classifiers = [
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+[project.urls]
+Homepage = "https://github.com/alecsandrei/gisco-geodata"
+
+[build-system]
+requires = ["setuptools>=64", "setuptools_scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[tool.flake8]
+max-line-length = 80
