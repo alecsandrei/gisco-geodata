@@ -39,4 +39,16 @@ Theme.NUTS.download(
     nuts_level='LEVL_3',
     out_dir=out_dir,
 )
+
+# Equivalent to the above
+datasets = Theme.NUTS.get_datasets()
+datasets[-1].download(
+    file_format='shp',
+    spatial_type='BN',
+    scale='60M',
+    projection='4326',
+    nuts_level='LEVL_3',
+    out_dir=out_dir,
+)
+
 ```

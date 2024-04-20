@@ -11,6 +11,7 @@ from typing import (
 from pathlib import Path
 from functools import partial
 from enum import Enum
+from dataclasses import dataclass
 
 from .parser import (
     get_properties,
@@ -79,7 +80,7 @@ class Theme(Enum):
     def get_datasets(self) -> list[Dataset]:
         return (
             [Dataset(self, year.split('-')[-1])
-             for year in self.properties.keys()]
+             for year in self.datasets.keys()]
         )
 
     @property
@@ -184,11 +185,12 @@ class Theme(Enum):
         )
 
 
+@dataclass
 class Dataset:
+    theme: Theme
+    year: str
 
-    def __init__(self, theme: Theme, year: str):
-        self.theme = theme
-        self.year = year
+    def __post_init__(self):
         self.download = partial(self.theme.download, year=self.year)
 
     @property
