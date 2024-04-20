@@ -1,4 +1,4 @@
-Can be used to download geodata from the GISCO API.
+Can be used to download geodata from the [GISCO API](https://gisco-services.ec.europa.eu/distribution/v2/).
 
 [currently under development, functionality is limited]
 
