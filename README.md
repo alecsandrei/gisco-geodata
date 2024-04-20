@@ -4,6 +4,11 @@ Download geodata using the GISCO API.
 
 # Installation
 
+```sh
+git clone https://github.com/alecsandrei/gisco-geodata.git
+cd gisco-geodata
+pip install .
+```
 
 # Example
 ```python
