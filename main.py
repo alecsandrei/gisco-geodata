@@ -2,7 +2,8 @@ import os
 from pathlib import Path
 
 from gisco_geodata import (
-    Theme,
+    NUTS,
+    Countries,
     set_requests_args
 )
 
@@ -14,7 +15,9 @@ if __name__ == '__main__':
 
     set_requests_args(verify=False)  # prevents SSLError in my case
 
-    Theme.NUTS.download(
+    nuts = NUTS()
+
+    nuts.download(
         file_format='shp',
         year='2021',
         spatial_type='BN',
@@ -25,7 +28,7 @@ if __name__ == '__main__':
     )
 
     # Equivalent to the above
-    datasets = Theme.NUTS.get_datasets()
+    datasets = nuts.get_datasets()
     datasets[-1].download(
         file_format='shp',
         spatial_type='BN',
@@ -34,3 +37,16 @@ if __name__ == '__main__':
         nuts_level='LEVL_3',
         out_dir=out_dir,
     )
+
+    # Retrieve Country information as Polygons
+    countries = Countries()
+
+    # If you have geopandas installed, this will be a GDF.
+    gdf = countries.get(
+        countries=['RO', 'IT'],
+        spatial_type='RG',
+    )
+    if not isinstance(gdf, list):
+        print(gdf.head(5))
+    else:
+        print(gdf)

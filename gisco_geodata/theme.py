@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import (
     Any,
     TypedDict,
+    Sequence,
     Union,
     Literal,
     Optional,
@@ -14,11 +15,17 @@ from enum import Enum
 from dataclasses import dataclass
 
 from .parser import (
-    get_properties,
+    get_datasets,
     get_file,
     get_param,
     get_themes
 )
+from .utils import geopandas_is_available
+
+GEOPANDAS_AVAILABLE = geopandas_is_available()
+
+if GEOPANDAS_AVAILABLE:
+    import geopandas as gpd
 
 
 PathLike = Union[Path, str]
@@ -27,8 +34,17 @@ Projection = Literal['4326', '3035', '3857']
 FileFormat = Literal['csv', 'geojson', 'pbf', 'shp', 'svg', 'topojson']
 Scale = Literal['100K', '01M', '03M', '10M', '20M', '60M']
 SpatialType = Literal['AT', 'BN', 'LB', 'RG']
+Geometry = Literal['point', 'geometry']
 CountryBoundary = Literal['INLAND', 'COASTL']
 NUTSLevel = Literal['LEVL_0', 'LEVL_1', 'LEVL_2', 'LEVL_3']
+Units = dict[str, list[str]]
+Files = dict[str, list[str]]
+
+
+class GeoJSON(TypedDict):
+    crs: dict
+    type: str
+    features: list[dict]
 
 
 class TitleMultilingual(TypedDict):
@@ -65,31 +81,28 @@ class Theme(Enum):
     COASTAL_LINES = 'coas'
     COMMUNES = 'communes'
     COUNTRIES = 'countries'
-    LAU = 'lau'
+    LOCAL_ADMINISTRATIVE_UNITS = 'lau'
     NUTS = 'nuts'
     URBAN_AUDIT = 'urau'
 
+
+@dataclass
+class ThemeParser:
+    name: str
+
     @property
     def properties(self) -> JSON:
-        return get_themes()[self.value]
+        return get_themes()[self.name]
 
     @property
     def datasets(self) -> JSON:
-        return get_properties(self.value)
+        return get_datasets(self.name)
 
     def get_datasets(self) -> list[Dataset]:
         return (
             [Dataset(self, year.split('-')[-1])
              for year in self.datasets.keys()]
         )
-
-    @property
-    def title(self) -> str:
-        return self.properties[Property.TITLE.value]
-
-    @property
-    def title_multilingual(self) -> str:
-        return self.properties[Property.TITLE_MULTILINGUAL.value]
 
     def get_property(self, property: str) -> Any:
         return self.properties[property]
@@ -172,7 +185,7 @@ class Theme(Enum):
     ):
 
         self.get_dataset(year)._download(
-            self.value,
+            self.name,
             spatial_type,
             scale,
             year,
@@ -185,55 +198,156 @@ class Theme(Enum):
         )
 
 
+class CoastalLines(ThemeParser):
+    name = Theme.COASTAL_LINES.value
+
+    def __init__(self, name: Optional[str] = None):
+        if name:
+            self.name = name
+        super().__init__(self.name)
+
+
+class Communes(ThemeParser):
+    name = Theme.COMMUNES.value
+
+    def __init__(self, name: Optional[str] = None):
+        if name:
+            self.name = name
+        super().__init__(self.name)
+
+
+class Countries(ThemeParser):
+    name = Theme.COUNTRIES.value
+
+    def __init__(self, name: Optional[str] = None):
+        if name:
+            self.name = name
+        super().__init__(self.name)
+
+    @property
+    def default_dataset(self) -> Dataset:
+        return self.get_datasets()[-1]
+
+    def get_units(self, year: Optional[str] = None) -> Units:
+        if year is None:
+            return self.default_dataset.units
+        return Dataset(self, year).units
+
+    @overload
+    def get(
+        self,
+        *,
+        countries: Union[str, Sequence[str]],
+        spatial_type: Literal['LB'],
+        projection: Projection = '4326',
+        year: Optional[str] = None,
+    ) -> Union[list[GeoJSON], gpd.GeoDataFrame]:
+        ...
+
+    @overload
+    def get(
+        self,
+        *,
+        countries: Union[str, Sequence[str]],
+        spatial_type: Literal['RG'],
+        scale: Scale = '20M',
+        projection: Projection = '4326',
+        year: Optional[str] = None,
+    ) -> Union[list[GeoJSON], gpd.GeoDataFrame]:
+        ...
+
+    def get(
+        self,
+        *,
+        countries: Union[str, Sequence[str]],
+        spatial_type: str = 'RG',
+        projection: str = '4326',
+        scale: Optional[str] = '20M',
+        year: Optional[str] = None,
+    ) -> Union[list[GeoJSON], gpd.GeoDataFrame]:
+        if year is None:
+            year = self.default_dataset.year
+        region = '{country}-region-{scale}-{projection}-{year}.geojson'
+        label = '{country}-label-{projection}-{year}.geojson'
+        geojson = []
+        for country in countries:
+            if spatial_type == 'RG':
+                param = region.format(
+                    country=country,
+                    scale=scale,
+                    projection=projection,
+                    year=year
+                )
+                geojson.append(get_param(self.name, 'distribution', param))
+            elif spatial_type == 'LB':
+                param = label.format(
+                    country=country,
+                    projection=projection,
+                    year=year
+                )
+                geojson.append(get_param(self.name, 'distribution', param))
+            else:
+                raise ValueError(
+                    f'Wrong parameter {spatial_type}.'
+                    'Allowed are "RG" and "LB".'
+                )
+        if GEOPANDAS_AVAILABLE:
+            return gpd.GeoDataFrame(data=geojson)
+        return geojson
+
+
+class LocalAdministrativeUnits(ThemeParser):
+    name = Theme.LOCAL_ADMINISTRATIVE_UNITS.value
+
+    def __init__(self, name: Optional[str] = None):
+        if name:
+            self.name = name
+        super().__init__(self.name)
+
+
+class NUTS(ThemeParser):
+    name = Theme.NUTS.value
+
+    def __init__(self, name: Optional[str] = None):
+        if name:
+            self.name = name
+        super().__init__(self.name)
+
+
+class UrbanAudit(ThemeParser):
+    name = Theme.URBAN_AUDIT.value
+
+    def __init__(self, name: Optional[str] = None):
+        if name:
+            self.name = name
+        super().__init__(self.name)
+
+
 @dataclass
 class Dataset:
-    theme: Theme
+    theme_parser: ThemeParser
     year: str
 
     def __post_init__(self):
-        self.download = partial(self.theme.download, year=self.year)
+        self.download = partial(self.theme_parser.download, year=self.year)
 
     @property
     def properties(self) -> JSON:
-        return self.theme.datasets[
-            [k for k in self.theme.datasets.keys() if self.year in k][0]
+        return self.theme_parser.datasets[
+            [k for k in self.theme_parser.datasets.keys() if self.year in k][0]
         ]
 
     @property
-    def date(self) -> str:
-        return self.properties[Property.DATE.value]
+    def units(self) -> Units:
+        return get_param(
+            self.theme_parser.name, self.get_property(Property.UNITS.value)
+        )
 
     @property
-    def documentation(self) -> str:
-        return self.properties[Property.DOCUMENTATION.value]
-
-    @property
-    def files(self) -> str:
-        return self.properties[Property.FILES.value]
-
-    @property
-    def hashtag(self) -> str:
-        return self.properties[Property.HASHTAG.value]
-
-    @property
-    def metadata(self) -> Metadata:
-        return self.properties[Property.METADATA.value]
-
-    @property
-    def packages(self) -> str:
-        return self.properties[Property.PACKAGES.value]
-
-    @property
-    def title(self) -> str:
-        return self.properties[Property.TITLE.value]
-
-    @property
-    def title_multilingual(self) -> TitleMultilingual:
-        return self.properties[Property.TITLE_MULTILINGUAL.value]
-
-    @property
-    def units(self) -> str:
-        return self.properties[Property.UNITS.value]
+    def files(self) -> Files:
+        return get_param(
+            self.theme_parser.name, self.get_property(Property.FILES.value)
+        )
 
     def get_property(self, property: str) -> Any:
         return self.properties[property]
@@ -243,7 +357,7 @@ class Dataset:
         file_format: str,
         file_stem: str
     ) -> Optional[str]:
-        json_ = get_param(self.theme.value, self.files)[file_format]
+        json_ = self.files[file_format]
         for value in json_:
             # We check against 'SPATIALTYPE_YEAR_PROJECTION' etc.
             # instead of 'THEME_SPATIALTYPE_YEAR_PROJECTION'.
@@ -268,6 +382,8 @@ class Dataset:
         file_stem_upper = file_stem.upper()
         file_name = self.get_file_name_from_stem(file_format, file_stem_upper)
         assert file_name is not None, f'File not found: {file_stem}'
-        content = get_file(self.theme.value, file_format, file_name)
+        content = get_file(
+            self.theme_parser.name, file_format, file_name
+        )
         with open(Path(out_dir) / file_name, 'wb') as f:
             f.write(content)

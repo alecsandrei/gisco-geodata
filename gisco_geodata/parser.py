@@ -10,7 +10,7 @@ import requests
 URL = 'https://gisco-services.ec.europa.eu/distribution/v2/'
 THEMES_URL = urljoin(URL, 'themes.json')
 DATASET_URL = urljoin(URL, '{theme}/datasets.json')
-PARAM_URL = urljoin(URL, '{theme}/{param}')
+PARAMS_URL = urljoin(URL, '{theme}/{params}')
 FILE_URL = urljoin(URL, '{theme}/{file_format}/{file}')
 
 REQUESTS_KWARGS = {}
@@ -32,7 +32,7 @@ def get_themes() -> JSON:
     return requests.get(THEMES_URL, **REQUESTS_KWARGS).json()
 
 
-def get_properties(theme: str) -> JSON:
+def get_datasets(theme: str) -> JSON:
     return (
         requests.get(
             DATASET_URL.format(theme=theme),
@@ -54,10 +54,11 @@ def get_file(theme: str, file_format: str, file: str) -> bytes:
     )
 
 
-def get_param(theme: str, param: str) -> JSON:
+def get_param(theme: str, *params: str) -> JSON:
+    print(PARAMS_URL.format(theme=theme, params='/'.join(params)))
     return (
         requests.get(
-            PARAM_URL.format(theme=theme, param=param),
+            PARAMS_URL.format(theme=theme, params='/'.join(params)),
             **REQUESTS_KWARGS
         ).json()
     )
