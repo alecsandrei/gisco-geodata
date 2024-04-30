@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import (
     Any,
     TypedDict,
@@ -14,19 +15,27 @@ from functools import partial
 from enum import Enum
 from dataclasses import dataclass
 
+import httpx
+
 from .parser import (
     get_datasets,
     get_file,
     get_param,
-    get_themes
+    get_themes,
+    HTTPX_KWARGS
 )
-from .utils import geopandas_is_available
+from .utils import (
+    geopandas_is_available,
+    numbers_from,
+    from_geojson
+)
 
 GEOPANDAS_AVAILABLE = geopandas_is_available()
 
 if GEOPANDAS_AVAILABLE:
     import geopandas as gpd
 
+SEMAPHORE = asyncio.Semaphore(5)
 
 PathLike = Union[Path, str]
 JSON = dict[str, Any]
@@ -39,6 +48,9 @@ CountryBoundary = Literal['INLAND', 'COASTL']
 NUTSLevel = Literal['LEVL_0', 'LEVL_1', 'LEVL_2', 'LEVL_3']
 Units = dict[str, list[str]]
 Files = dict[str, list[str]]
+
+UNITS_REGION = '{unit}-region-{scale}-{projection}-{year}.geojson'
+UNITS_LABEL = '{unit}-label-{projection}-{year}.geojson'
 
 
 class GeoJSON(TypedDict):
@@ -228,10 +240,10 @@ class Countries(ThemeParser):
     def default_dataset(self) -> Dataset:
         return self.get_datasets()[-1]
 
-    def get_units(self, year: Optional[str] = None) -> Units:
+    async def get_units(self, year: Optional[str] = None) -> Units:
         if year is None:
-            return self.default_dataset.units
-        return Dataset(self, year).units
+            return await self.default_dataset.units
+        return await Dataset(self, year).units
 
     @overload
     def get(
@@ -267,32 +279,36 @@ class Countries(ThemeParser):
     ) -> Union[list[GeoJSON], gpd.GeoDataFrame]:
         if year is None:
             year = self.default_dataset.year
-        region = '{country}-region-{scale}-{projection}-{year}.geojson'
-        label = '{country}-label-{projection}-{year}.geojson'
         geojson = []
+        if isinstance(countries, str):
+            countries = [countries]
         for country in countries:
             if spatial_type == 'RG':
-                param = region.format(
-                    country=country,
+                param = UNITS_REGION.format(
+                    unit=country,
                     scale=scale,
                     projection=projection,
                     year=year
                 )
-                geojson.append(get_param(self.name, 'distribution', param))
+                geojson.append(
+                    asyncio.run(get_param(self.name, 'distribution', param))
+                )
             elif spatial_type == 'LB':
-                param = label.format(
-                    country=country,
+                param = UNITS_LABEL.format(
+                    unit=country,
                     projection=projection,
                     year=year
                 )
-                geojson.append(get_param(self.name, 'distribution', param))
+                geojson.append(
+                    asyncio.run(get_param(self.name, 'distribution', param))
+                )
             else:
                 raise ValueError(
                     f'Wrong parameter {spatial_type}.'
                     'Allowed are "RG" and "LB".'
                 )
         if GEOPANDAS_AVAILABLE:
-            return gpd.GeoDataFrame(data=geojson)
+            return from_geojson(geojson)
         return geojson
 
 
@@ -312,6 +328,151 @@ class NUTS(ThemeParser):
         if name:
             self.name = name
         super().__init__(self.name)
+
+    @property
+    def default_dataset(self) -> Dataset:
+        return self.get_datasets()[-1]
+
+    async def get_units(self, year: Optional[str] = None) -> Units:
+        if year is None:
+            return await self.default_dataset.units
+        return await Dataset(self, year).units
+
+    async def _gather_files(
+        self,
+        nuts_level: NUTSLevel,
+        countries: Optional[Sequence[str]] = None,
+    ):
+        level = int(''.join(numbers_from(nuts_level)))
+
+        def filter_logic(k: str):
+            conditions = []
+            if countries is not None:
+                conditions.append(k in countries)
+            conditions.append(
+                len(numbers_from(k)) == level
+            )
+            return all(conditions)
+        return filter(filter_logic, await self.get_units())
+
+    async def _get_one(
+        self,
+        unit,
+        spatial_type,
+        scale,
+        projection,
+        year,
+        client: httpx.AsyncClient
+    ):
+        if spatial_type == 'RG':
+            param = UNITS_REGION.format(
+                unit=unit,
+                scale=scale,
+                projection=projection,
+                year=year
+            )
+        elif spatial_type == 'LB':
+            param = UNITS_LABEL.format(
+                unit=unit,
+                projection=projection,
+                year=year
+            )
+        else:
+            raise ValueError(
+                f'Wrong parameter {spatial_type}.'
+                'Allowed are "RG" and "LB".'
+            )
+        try:
+            async with SEMAPHORE:
+                geojson = await get_param(
+                    self.name, 'distribution', param, client=client
+                )
+        except Exception:
+            raise
+        return geojson
+
+    async def _get_many(
+        self,
+        nuts_level,
+        countries,
+        spatial_type,
+        scale,
+        projection,
+        year
+    ):
+        geojson = []
+        async with httpx.AsyncClient(**HTTPX_KWARGS) as client:
+            to_do = [
+                self._get_one(
+                    unit, spatial_type, scale, projection, year, client
+                )
+                for unit in await self._gather_files(nuts_level, countries)
+            ]
+            to_do_iter = asyncio.as_completed(to_do)
+            for coro in to_do_iter:
+                try:
+                    geojson.append(await coro)  # <8>
+                except httpx.HTTPStatusError:
+                    raise
+                except httpx.RequestError:
+                    raise
+                except KeyboardInterrupt:
+                    break
+        for coro in to_do_iter:
+            geojson.append(await coro)
+        return geojson
+
+    @overload
+    def get(
+        self,
+        *,
+        countries: Optional[Union[str, Sequence[str]]] = None,
+        nuts_level: NUTSLevel = 'LEVL_0',
+        spatial_type: Literal['LB'] = 'LB',
+        projection: Projection = '4326',
+        year: Optional[str] = None,
+    ) -> Union[list[GeoJSON], gpd.GeoDataFrame]:
+        ...
+
+    @overload
+    def get(
+        self,
+        *,
+        countries: Optional[Union[str, Sequence[str]]] = None,
+        nuts_level: NUTSLevel = 'LEVL_0',
+        spatial_type: Literal['RG'] = 'RG',
+        scale: Scale = '20M',
+        projection: Projection = '4326',
+        year: Optional[str] = None,
+    ) -> Union[list[GeoJSON], gpd.GeoDataFrame]:
+        ...
+
+    def get(
+        self,
+        *,
+        countries: Optional[Union[str, Sequence[str]]] = None,
+        nuts_level: NUTSLevel = 'LEVL_0',
+        spatial_type: str = 'RG',
+        projection: str = '4326',
+        scale: Optional[str] = '20M',
+        year: Optional[str] = None
+    ) -> Union[list[GeoJSON], gpd.GeoDataFrame]:
+        if isinstance(countries, str):
+            countries = [countries]
+        if year is None:
+            year = self.default_dataset.year
+        coro = self._get_many(
+            nuts_level,
+            countries,
+            spatial_type,
+            scale,
+            projection,
+            year
+        )
+        geojson = asyncio.run(coro)
+        if GEOPANDAS_AVAILABLE:
+            return from_geojson(geojson)
+        return geojson
 
 
 class UrbanAudit(ThemeParser):
@@ -338,26 +499,26 @@ class Dataset:
         ]
 
     @property
-    def units(self) -> Units:
-        return get_param(
+    async def units(self) -> Units:
+        return await get_param(
             self.theme_parser.name, self.get_property(Property.UNITS.value)
         )
 
     @property
-    def files(self) -> Files:
-        return get_param(
+    async def files(self) -> Files:
+        return await get_param(
             self.theme_parser.name, self.get_property(Property.FILES.value)
         )
 
     def get_property(self, property: str) -> Any:
         return self.properties[property]
 
-    def get_file_name_from_stem(
+    async def get_file_name_from_stem(
         self,
         file_format: str,
         file_stem: str
     ) -> Optional[str]:
-        json_ = self.files[file_format]
+        json_ = (await self.files)[file_format]
         for value in json_:
             # We check against 'SPATIALTYPE_YEAR_PROJECTION' etc.
             # instead of 'THEME_SPATIALTYPE_YEAR_PROJECTION'.
@@ -380,7 +541,9 @@ class Dataset:
         # which can't be parsed from anywhere.
         file_stem = '_'.join(arg for arg in args[1:] if arg is not None)
         file_stem_upper = file_stem.upper()
-        file_name = self.get_file_name_from_stem(file_format, file_stem_upper)
+        file_name = asyncio.run(
+            self.get_file_name_from_stem(file_format, file_stem_upper)
+        )
         assert file_name is not None, f'File not found: {file_stem}'
         content = get_file(
             self.theme_parser.name, file_format, file_name

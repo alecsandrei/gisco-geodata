@@ -1,4 +1,4 @@
-from .parser import set_requests_args
+from .parser import set_httpx_args
 from .theme import (
     CoastalLines,
     LocalAdministrativeUnits,

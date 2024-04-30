@@ -1,10 +1,11 @@
-import warnings
 from urllib.parse import urljoin
-from typing import Any
+from typing import (
+    Any,
+    Optional
+)
 from functools import cache
 
-from urllib3.exceptions import InsecureRequestWarning
-import requests
+import httpx
 
 
 URL = 'https://gisco-services.ec.europa.eu/distribution/v2/'
@@ -13,30 +14,25 @@ DATASET_URL = urljoin(URL, '{theme}/datasets.json')
 PARAMS_URL = urljoin(URL, '{theme}/{params}')
 FILE_URL = urljoin(URL, '{theme}/{file_format}/{file}')
 
-REQUESTS_KWARGS = {}
+HTTPX_KWARGS = {}
 JSON = dict[str, Any]
 
 
-def set_requests_args(**kwargs):
+def set_httpx_args(**kwargs):
     for k, v in kwargs.items():
-        REQUESTS_KWARGS[k] = v
-        if k == 'verify' and v is False:
-            warnings.filterwarnings(
-                action='ignore',
-                category=InsecureRequestWarning
-            )
+        HTTPX_KWARGS[k] = v
 
 
 @cache
 def get_themes() -> JSON:
-    return requests.get(THEMES_URL, **REQUESTS_KWARGS).json()
+    return httpx.get(THEMES_URL, **HTTPX_KWARGS).json()
 
 
 def get_datasets(theme: str) -> JSON:
     return (
-        requests.get(
+        httpx.get(
             DATASET_URL.format(theme=theme),
-            **REQUESTS_KWARGS
+            **HTTPX_KWARGS
         ).json()
     )
 
@@ -47,18 +43,24 @@ def get_property(theme: str, property: str) -> Any:
 
 def get_file(theme: str, file_format: str, file: str) -> bytes:
     return (
-        requests.get(
+        httpx.get(
             FILE_URL.format(theme=theme, file_format=file_format, file=file),
-            **REQUESTS_KWARGS
+            **HTTPX_KWARGS
         ).content
     )
 
 
-def get_param(theme: str, *params: str) -> JSON:
+async def get_param(
+    theme: str,
+    *params: str,
+    client: Optional[httpx.AsyncClient] = None,
+) -> JSON:
     print(PARAMS_URL.format(theme=theme, params='/'.join(params)))
-    return (
-        requests.get(
-            PARAMS_URL.format(theme=theme, params='/'.join(params)),
-            **REQUESTS_KWARGS
-        ).json()
+    if client is None:
+        client = httpx.AsyncClient(**HTTPX_KWARGS)
+    resp = await client.get(
+        PARAMS_URL.format(theme=theme, params='/'.join(params)),
+        follow_redirects=True
     )
+    resp.raise_for_status()
+    return resp.json()

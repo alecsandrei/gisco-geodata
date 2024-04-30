@@ -11,11 +11,14 @@ python3 -m pip install .
 ```
 
 # Requirements
-- requests
+- httpx
 - Python >= 3.9
 - Optional: GeoPandas
 
-# Example
+# Examples
+
+Also check the examples folder.
+
 ```python
 import os
 from pathlib import Path

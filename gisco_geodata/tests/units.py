@@ -1,24 +1,46 @@
+import asyncio
+
 import geopandas as gpd
 
 from gisco_geodata import (
     Countries,
-    set_requests_args
+    NUTS,
+    set_httpx_args
 )
 from gisco_geodata import theme
 
-set_requests_args(verify=False)
+set_httpx_args(verify=False)
 COUNTRIES = Countries()
+NUTS_ = NUTS()
 
 
-def test_get():
+def test_get_countries():
     setattr(theme, 'GEOPANDAS_AVAILABLE', False)
-    assert isinstance(COUNTRIES.get_units(), dict)
-    assert isinstance(COUNTRIES.get_units()['RO'], list)
+    units = asyncio.run(COUNTRIES.get_units())
+    assert isinstance(units, dict)
+    assert isinstance(units['RO'], list)
     geojson = COUNTRIES.get(countries=['RO', 'IT'], spatial_type='RG')
     assert isinstance(geojson, list)
 
 
-def test_get_geopandas():
+def test_get_countries_geopandas():
     setattr(theme, 'GEOPANDAS_AVAILABLE', True)
     geojson = COUNTRIES.get(countries=['RO', 'IT'], spatial_type='RG')
+    assert isinstance(geojson, gpd.GeoDataFrame)
+
+
+def test_get_nuts():
+    setattr(theme, 'GEOPANDAS_AVAILABLE', False)
+    geojson = NUTS_.get(
+        countries='RO',
+        nuts_level='LEVL_0',
+        spatial_type='RG'
+    )
+    assert isinstance(geojson, list)
+    setattr(theme, 'GEOPANDAS_AVAILABLE', True)
+    geojson = NUTS_.get(
+        countries='RO',
+        nuts_level='LEVL_0',
+        spatial_type='RG'
+    )
     assert isinstance(geojson, gpd.GeoDataFrame)
