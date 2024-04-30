@@ -21,9 +21,6 @@ def test_get_countries():
     assert isinstance(units['RO'], list)
     geojson = COUNTRIES.get(countries=['RO', 'IT'], spatial_type='RG')
     assert isinstance(geojson, list)
-
-
-def test_get_countries_geopandas():
     setattr(theme, 'GEOPANDAS_AVAILABLE', True)
     geojson = COUNTRIES.get(countries=['RO', 'IT'], spatial_type='RG')
     assert isinstance(geojson, gpd.GeoDataFrame)

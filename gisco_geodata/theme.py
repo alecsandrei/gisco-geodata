@@ -9,6 +9,7 @@ from typing import (
     Literal,
     Optional,
     overload,
+    cast
 )
 from pathlib import Path
 from functools import partial
@@ -22,7 +23,6 @@ from .parser import (
     get_file,
     get_param,
     get_themes,
-    HTTPX_KWARGS
 )
 from .utils import (
     geopandas_is_available,
@@ -35,7 +35,7 @@ GEOPANDAS_AVAILABLE = geopandas_is_available()
 if GEOPANDAS_AVAILABLE:
     import geopandas as gpd
 
-SEMAPHORE = asyncio.Semaphore(5)
+SEMAPHORE = asyncio.Semaphore(10)
 
 PathLike = Union[Path, str]
 JSON = dict[str, Any]
@@ -291,7 +291,9 @@ class Countries(ThemeParser):
                     year=year
                 )
                 geojson.append(
-                    asyncio.run(get_param(self.name, 'distribution', param))
+                    cast(GeoJSON, asyncio.run(
+                        get_param(self.name, 'distribution', param)
+                    ))
                 )
             elif spatial_type == 'LB':
                 param = UNITS_LABEL.format(
@@ -300,7 +302,9 @@ class Countries(ThemeParser):
                     year=year
                 )
                 geojson.append(
-                    asyncio.run(get_param(self.name, 'distribution', param))
+                    cast(GeoJSON, asyncio.run(
+                        get_param(self.name, 'distribution', param)
+                    ))
                 )
             else:
                 raise ValueError(
@@ -362,7 +366,6 @@ class NUTS(ThemeParser):
         scale,
         projection,
         year,
-        client: httpx.AsyncClient
     ):
         if spatial_type == 'RG':
             param = UNITS_REGION.format(
@@ -385,7 +388,7 @@ class NUTS(ThemeParser):
         try:
             async with SEMAPHORE:
                 geojson = await get_param(
-                    self.name, 'distribution', param, client=client
+                    self.name, 'distribution', param
                 )
         except Exception:
             raise
@@ -401,23 +404,22 @@ class NUTS(ThemeParser):
         year
     ):
         geojson = []
-        async with httpx.AsyncClient(**HTTPX_KWARGS) as client:
-            to_do = [
-                self._get_one(
-                    unit, spatial_type, scale, projection, year, client
-                )
-                for unit in await self._gather_files(nuts_level, countries)
-            ]
-            to_do_iter = asyncio.as_completed(to_do)
-            for coro in to_do_iter:
-                try:
-                    geojson.append(await coro)  # <8>
-                except httpx.HTTPStatusError:
-                    raise
-                except httpx.RequestError:
-                    raise
-                except KeyboardInterrupt:
-                    break
+        to_do = [
+            self._get_one(
+                unit, spatial_type, scale, projection, year
+            )
+            for unit in await self._gather_files(nuts_level, countries)
+        ]
+        to_do_iter = asyncio.as_completed(to_do)
+        for coro in to_do_iter:
+            try:
+                geojson.append(await coro)  # <8>
+            except httpx.HTTPStatusError:
+                raise
+            except httpx.RequestError:
+                raise
+            except KeyboardInterrupt:
+                break
         for coro in to_do_iter:
             geojson.append(await coro)
         return geojson
@@ -549,4 +551,4 @@ class Dataset:
             self.theme_parser.name, file_format, file_name
         )
         with open(Path(out_dir) / file_name, 'wb') as f:
-            f.write(content)
+            f.write(asyncio.run(content))

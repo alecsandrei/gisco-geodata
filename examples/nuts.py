@@ -1,7 +1,12 @@
+
+from gisco_geodata.theme import GEOPANDAS_AVAILABLE
 from gisco_geodata import (
     NUTS,
     set_httpx_args
 )
+
+if GEOPANDAS_AVAILABLE:
+    import matplotlib.pyplot as plt
 
 
 DEFAULT = {
@@ -36,11 +41,15 @@ def get_regions_polygons():
     nuts = NUTS()
     return nuts.get(
         spatial_type='RG',
-        nuts_level='LEVL_3'
+        nuts_level='LEVL_1'
     )
 
 
 if __name__ == '__main__':
-    set_httpx_args(verify=False)
+    set_httpx_args(verify=False, timeout=10)
 
     gdf = get_regions_polygons()
+
+    if GEOPANDAS_AVAILABLE:
+        gdf.plot()
+        plt.show()

@@ -1,9 +1,5 @@
 from urllib.parse import urljoin
-from typing import (
-    Any,
-    Optional
-)
-from functools import cache
+from typing import Any
 
 import httpx
 
@@ -23,44 +19,40 @@ def set_httpx_args(**kwargs):
         HTTPX_KWARGS[k] = v
 
 
-@cache
 def get_themes() -> JSON:
-    return httpx.get(THEMES_URL, **HTTPX_KWARGS).json()
+    resp = httpx.get(THEMES_URL, **HTTPX_KWARGS)
+    resp.raise_for_status()
+    return resp.json()
 
 
 def get_datasets(theme: str) -> JSON:
-    return (
-        httpx.get(
-            DATASET_URL.format(theme=theme),
-            **HTTPX_KWARGS
-        ).json()
-    )
+    resp = httpx.get(DATASET_URL.format(theme=theme), **HTTPX_KWARGS)
+    resp.raise_for_status()
+    return resp.json()
 
 
 def get_property(theme: str, property: str) -> Any:
     return get_themes()[theme][property]
 
 
-def get_file(theme: str, file_format: str, file: str) -> bytes:
-    return (
-        httpx.get(
-            FILE_URL.format(theme=theme, file_format=file_format, file=file),
-            **HTTPX_KWARGS
-        ).content
-    )
+async def get_file(theme: str, file_format: str, file: str) -> bytes:
+    async with httpx.AsyncClient(**HTTPX_KWARGS) as client:
+        resp = await client.get(
+            FILE_URL.format(theme=theme, file_format=file_format, file=file)
+        )
+        resp.raise_for_status()
+        return resp.content
 
 
 async def get_param(
     theme: str,
     *params: str,
-    client: Optional[httpx.AsyncClient] = None,
 ) -> JSON:
-    print(PARAMS_URL.format(theme=theme, params='/'.join(params)))
-    if client is None:
-        client = httpx.AsyncClient(**HTTPX_KWARGS)
-    resp = await client.get(
-        PARAMS_URL.format(theme=theme, params='/'.join(params)),
-        follow_redirects=True
-    )
-    resp.raise_for_status()
-    return resp.json()
+    async with httpx.AsyncClient(**HTTPX_KWARGS) as client:
+        # print(PARAMS_URL.format(theme=theme, params='/'.join(params)))
+        resp = await client.get(
+            PARAMS_URL.format(theme=theme, params='/'.join(params)),
+            follow_redirects=True
+        )
+        resp.raise_for_status()
+        return resp.json()
