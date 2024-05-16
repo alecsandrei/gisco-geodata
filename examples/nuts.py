@@ -48,11 +48,18 @@ def get_regions_polygons():
     )
 
 
-if __name__ == '__main__':
+def main():
     set_httpx_args(verify=False, timeout=10)
 
-    gdf = get_regions_polygons()
+    nuts_1 = get_regions_polygons()
+    subset = get_countries_subset()
+    points = get_countries_points()
+    nuts_0 = get_countries_polygons()
 
     if GEOPANDAS_AVAILABLE:
-        gdf.plot()
+        nuts_1.plot()
         plt.show()
+
+
+if __name__ == '__main__':
+    main()

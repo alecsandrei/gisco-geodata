@@ -88,3 +88,13 @@ async def handle_completed_requests(
     # for coro in coros:
     #     json.append(await coro)
     return json
+
+
+def construct_param(
+    *args: Union[str, None],
+    delimiter: str = '_',
+    suffix: str = ''
+):
+    return ''.join(
+        [delimiter.join(arg for arg in args if arg is not None), suffix]
+    )

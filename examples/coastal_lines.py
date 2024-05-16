@@ -18,7 +18,8 @@ def get():
         projection='4326'
     )
 
-if __name__ == '__main__':
+
+def main():
     set_httpx_args(verify=False, timeout=10)
 
     gdf = get()
@@ -26,3 +27,7 @@ if __name__ == '__main__':
     if GEOPANDAS_AVAILABLE:
         gdf.plot()
         plt.show()
+
+
+if __name__ == '__main__':
+    main()

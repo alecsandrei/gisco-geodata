@@ -15,7 +15,7 @@ def get_countries_subset():
         spatial_type='LB',
         countries=['IT', 'RO'],
         projection='4326',
-)
+    )
 
 
 def get_countries_polygons_1():
@@ -44,11 +44,18 @@ def get_countries_polygons_2():
     )
 
 
-if __name__ == '__main__':
+def main():
     set_httpx_args(verify=False, timeout=10)
 
-    gdf = get_countries_points()
+    gdf = get_countries_polygons_1()
+    _ = get_countries_polygons_2()
+    _ = get_countries_points()
+    _ = get_countries_subset()
 
     if GEOPANDAS_AVAILABLE:
         gdf.plot()
         plt.show()
+
+
+if __name__ == '__main__':
+    main()

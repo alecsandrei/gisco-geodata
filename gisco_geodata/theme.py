@@ -26,6 +26,7 @@ from .utils import (
     geopandas_is_available,
     numbers_from,
     handle_completed_requests,
+    construct_param,
     from_geojson
 )
 
@@ -50,7 +51,6 @@ Files = dict[str, list[str]]
 
 UNITS_REGION = '{unit}-region-{scale}-{projection}-{year}.geojson'
 UNITS_LABEL = '{unit}-label-{projection}-{year}.geojson'
-FILES = '{theme}_{spatial_type}_{scale}_{year}_{projection}.geojson'
 
 
 class GeoJSON(TypedDict):
@@ -230,20 +230,17 @@ class CoastalLines(ThemeParser):
     ):
         if year is None:
             year = self.default_dataset.year
-        file = FILES.format(
-            theme=self.name,
-            spatial_type='RG',
-            scale=scale,
-            year=year,
-            projection=projection
-        )
-        coro = asyncio.run(
-            get_param(
+        file = (
+            construct_param(
                 self.name,
-                'geojson',
-                file
+                'RG',
+                scale,
+                year,
+                projection,
+                suffix='.geojson'
             )
         )
+        coro = asyncio.run(get_param(self.name, 'geojson', file))
         return from_geojson(cast(GeoJSON, coro))
 
 
@@ -254,6 +251,68 @@ class Communes(ThemeParser):
         if name:
             self.name = name
         super().__init__(self.name)
+
+    @property
+    def default_dataset(self) -> Dataset:
+        return self.get_datasets()[-1]
+
+    @overload
+    def get(
+        self,
+        *,
+        spatial_type: SpatialType,
+        projection: Projection,
+        year: Optional[str] = None
+    ) -> Union[list[GeoJSON], gpd.GeoDataFrame]:
+        ...
+
+    @overload
+    def get(
+        self,
+        *,
+        spatial_type: SpatialType,
+        scale: Scale,
+        projection: Projection,
+        year: Optional[str] = None
+    ) -> Union[list[GeoJSON], gpd.GeoDataFrame]:
+        ...
+
+    @overload
+    def get(
+        self,
+        *,
+        spatial_type: SpatialType,
+        scale: Scale,
+        projection: Projection,
+        country_boundary: CountryBoundary,
+        year: Optional[str] = None
+    ) -> Union[list[GeoJSON], gpd.GeoDataFrame]:
+        ...
+
+    def get(
+        self,
+        *,
+        spatial_type: SpatialType = 'RG',
+        projection: Projection = '4326',
+        scale: Optional[Scale] = None,
+        country_boundary: Optional[CountryBoundary] = None,
+        year: Optional[str] = None
+    ) -> Union[list[GeoJSON], gpd.GeoDataFrame]:
+        if year is None:
+            year = self.default_dataset.year
+        file = construct_param(
+            'comm',  # not consistent with self.name
+            spatial_type,
+            scale,
+            year,
+            projection,
+            country_boundary,
+            suffix='.geojson'
+        )
+        coro = asyncio.run(
+            get_param(self.name, 'geojson', file)
+        )
+        return from_geojson(cast(GeoJSON, coro))
 
 
 class Countries(ThemeParser):
@@ -291,6 +350,7 @@ class Countries(ThemeParser):
         scale,
         projection,
         year,
+        semaphore
     ):
         if spatial_type == 'RG':
             param = UNITS_REGION.format(
@@ -311,7 +371,7 @@ class Countries(ThemeParser):
                 'Allowed are "RG" and "LB".'
             )
         try:
-            async with SEMAPHORE:
+            async with semaphore:
                 geojson = cast(
                     GeoJSON,
                     await get_param(
@@ -330,9 +390,10 @@ class Countries(ThemeParser):
         projection,
         year
     ):
+        semaphore = asyncio.Semaphore(50)
         to_do = [
             self._get_one(
-                unit, spatial_type, scale, projection, year
+                unit, spatial_type, scale, projection, year, semaphore
             )
             for unit in await self._gather_files(countries)
         ]
@@ -438,6 +499,7 @@ class NUTS(ThemeParser):
         scale,
         projection,
         year,
+        semaphore
     ):
         if spatial_type == 'RG':
             param = UNITS_REGION.format(
@@ -458,7 +520,7 @@ class NUTS(ThemeParser):
                 'Allowed are "RG" and "LB".'
             )
         try:
-            async with SEMAPHORE:
+            async with semaphore:
                 geojson = cast(
                     GeoJSON,
                     await get_param(
@@ -478,9 +540,10 @@ class NUTS(ThemeParser):
         projection,
         year
     ):
+        semaphore = asyncio.Semaphore(50)
         to_do = [
             self._get_one(
-                unit, spatial_type, scale, projection, year
+                unit, spatial_type, scale, projection, year, semaphore
             )
             for unit in await self._gather_files(nuts_level, countries)
         ]
