@@ -16,8 +16,6 @@ from functools import partial
 from enum import Enum
 from dataclasses import dataclass
 
-import httpx
-
 from .parser import (
     get_datasets,
     get_file,
@@ -27,6 +25,7 @@ from .parser import (
 from .utils import (
     geopandas_is_available,
     numbers_from,
+    handle_completed_requests,
     from_geojson
 )
 
@@ -35,7 +34,7 @@ GEOPANDAS_AVAILABLE = geopandas_is_available()
 if GEOPANDAS_AVAILABLE:
     import geopandas as gpd
 
-SEMAPHORE = asyncio.Semaphore(10)
+SEMAPHORE = asyncio.Semaphore(50)
 
 PathLike = Union[Path, str]
 JSON = dict[str, Any]
@@ -245,11 +244,77 @@ class Countries(ThemeParser):
             return await self.default_dataset.units
         return await Dataset(self, year).units
 
+    async def _gather_files(
+        self,
+        countries: Optional[Sequence[str]] = None,
+    ):
+        def filter_logic(k: str):
+            if countries is not None:
+                return k in countries
+            return True
+
+        return filter(filter_logic, await self.get_units())
+
+    async def _get_one(
+        self,
+        unit,
+        spatial_type,
+        scale,
+        projection,
+        year,
+    ):
+        if spatial_type == 'RG':
+            param = UNITS_REGION.format(
+                unit=unit,
+                scale=scale,
+                projection=projection,
+                year=year
+            )
+        elif spatial_type == 'LB':
+            param = UNITS_LABEL.format(
+                unit=unit,
+                projection=projection,
+                year=year
+            )
+        else:
+            raise ValueError(
+                f'Wrong parameter {spatial_type}.'
+                'Allowed are "RG" and "LB".'
+            )
+        try:
+            async with SEMAPHORE:
+                geojson = cast(
+                    GeoJSON,
+                    await get_param(
+                        self.name, 'distribution', param
+                    )
+                )
+        except Exception:
+            raise
+        return geojson
+
+    async def _get_many(
+        self,
+        countries,
+        spatial_type,
+        scale,
+        projection,
+        year
+    ):
+        to_do = [
+            self._get_one(
+                unit, spatial_type, scale, projection, year
+            )
+            for unit in await self._gather_files(countries)
+        ]
+        to_do_iter = asyncio.as_completed(to_do)
+        return await handle_completed_requests(coros=to_do_iter)
+
     @overload
     def get(
         self,
         *,
-        countries: Union[str, Sequence[str]],
+        countries: Optional[Union[str, Sequence[str]]] = None,
         spatial_type: Literal['LB'],
         projection: Projection = '4326',
         year: Optional[str] = None,
@@ -260,7 +325,7 @@ class Countries(ThemeParser):
     def get(
         self,
         *,
-        countries: Union[str, Sequence[str]],
+        countries: Optional[Union[str, Sequence[str]]] = None,
         spatial_type: Literal['RG'],
         scale: Scale = '20M',
         projection: Projection = '4326',
@@ -271,46 +336,24 @@ class Countries(ThemeParser):
     def get(
         self,
         *,
-        countries: Union[str, Sequence[str]],
+        countries: Optional[Union[str, Sequence[str]]] = None,
         spatial_type: str = 'RG',
         projection: str = '4326',
         scale: Optional[str] = '20M',
         year: Optional[str] = None,
     ) -> Union[list[GeoJSON], gpd.GeoDataFrame]:
-        if year is None:
-            year = self.default_dataset.year
-        geojson = []
         if isinstance(countries, str):
             countries = [countries]
-        for country in countries:
-            if spatial_type == 'RG':
-                param = UNITS_REGION.format(
-                    unit=country,
-                    scale=scale,
-                    projection=projection,
-                    year=year
-                )
-                geojson.append(
-                    cast(GeoJSON, asyncio.run(
-                        get_param(self.name, 'distribution', param)
-                    ))
-                )
-            elif spatial_type == 'LB':
-                param = UNITS_LABEL.format(
-                    unit=country,
-                    projection=projection,
-                    year=year
-                )
-                geojson.append(
-                    cast(GeoJSON, asyncio.run(
-                        get_param(self.name, 'distribution', param)
-                    ))
-                )
-            else:
-                raise ValueError(
-                    f'Wrong parameter {spatial_type}.'
-                    'Allowed are "RG" and "LB".'
-                )
+        if year is None:
+            year = self.default_dataset.year
+        coro = self._get_many(
+            countries,
+            spatial_type,
+            scale,
+            projection,
+            year
+        )
+        geojson = asyncio.run(coro)
         if GEOPANDAS_AVAILABLE:
             return from_geojson(geojson)
         return geojson
@@ -387,8 +430,11 @@ class NUTS(ThemeParser):
             )
         try:
             async with SEMAPHORE:
-                geojson = await get_param(
-                    self.name, 'distribution', param
+                geojson = cast(
+                    GeoJSON,
+                    await get_param(
+                        self.name, 'distribution', param
+                    )
                 )
         except Exception:
             raise
@@ -403,7 +449,6 @@ class NUTS(ThemeParser):
         projection,
         year
     ):
-        geojson = []
         to_do = [
             self._get_one(
                 unit, spatial_type, scale, projection, year
@@ -411,18 +456,7 @@ class NUTS(ThemeParser):
             for unit in await self._gather_files(nuts_level, countries)
         ]
         to_do_iter = asyncio.as_completed(to_do)
-        for coro in to_do_iter:
-            try:
-                geojson.append(await coro)  # <8>
-            except httpx.HTTPStatusError:
-                raise
-            except httpx.RequestError:
-                raise
-            except KeyboardInterrupt:
-                break
-        for coro in to_do_iter:
-            geojson.append(await coro)
-        return geojson
+        return await handle_completed_requests(coros=to_do_iter)
 
     @overload
     def get(

@@ -4,8 +4,14 @@ import pkg_resources
 from typing import (
     TYPE_CHECKING,
     Sequence,
-    Union
+    cast,
+    TypeVar,
+    Union,
+    Iterator,
 )
+import asyncio
+
+import httpx
 
 if TYPE_CHECKING:
     from gisco_geodata.theme import GeoJSON
@@ -50,12 +56,35 @@ def from_geojson(
             crs=geojsons['crs']['properties']['name']
         )
     elif isinstance(geojsons, Sequence):
-        return pd.concat([
-            gpd.GeoDataFrame.from_features(
-                features=geojson['features'],
-                crs=geojson['crs']['properties']['name']
-            )
-            for geojson in geojsons
-        ])
+        return cast(
+            gpd.GeoDataFrame,
+            pd.concat([
+                gpd.GeoDataFrame.from_features(
+                    features=geojson['features'],
+                    crs=geojson['crs']['properties']['name']
+                ) for geojson in geojsons
+            ])
+        )
     else:
         raise ValueError(f'Wrong argument {geojsons}')
+
+
+T = TypeVar('T')
+
+
+async def handle_completed_requests(
+    coros: Iterator[asyncio.futures.Future[T]]
+) -> list[T]:
+    json = []
+    for coro in coros:
+        try:
+            json.append(await coro)  # <8>
+        except httpx.HTTPStatusError:
+            raise
+        except httpx.RequestError:
+            raise
+        except KeyboardInterrupt:
+            break
+    # for coro in coros:
+    #     json.append(await coro)
+    return json

@@ -49,7 +49,7 @@ async def get_param(
     *params: str,
 ) -> JSON:
     async with httpx.AsyncClient(**HTTPX_KWARGS) as client:
-        # print(PARAMS_URL.format(theme=theme, params='/'.join(params)))
+        print(PARAMS_URL.format(theme=theme, params='/'.join(params)))
         resp = await client.get(
             PARAMS_URL.format(theme=theme, params='/'.join(params)),
             follow_redirects=True

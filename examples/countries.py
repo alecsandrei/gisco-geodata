@@ -1,6 +1,6 @@
 from gisco_geodata.theme import GEOPANDAS_AVAILABLE
 from gisco_geodata import (
-    NUTS,
+    Countries,
     set_httpx_args
 )
 
@@ -10,48 +10,44 @@ if GEOPANDAS_AVAILABLE:
 
 def get_countries_subset():
     """Choose two countries."""
-    nuts = NUTS()
-    return nuts.get(
+    countries = Countries()
+    return countries.get(
+        spatial_type='LB',
         countries=['IT', 'RO'],
         projection='4326',
-        scale='20M',
-        nuts_level='LEVL_0'
-    )
+)
 
 
-def get_countries_polygons():
+def get_countries_polygons_1():
     """Get all countries."""
-    nuts = NUTS()
-    return nuts.get(
+    countries = Countries()
+    return countries.get(
         spatial_type='RG',
         projection='4326',
-        scale='20M',
-        nuts_level='LEVL_0'
+        scale='20M'
     )
 
 
 def get_countries_points():
     """Get all countries."""
-    nuts = NUTS()
-    return nuts.get(
+    countries = Countries()
+    return countries.get(
         spatial_type='LB',
         projection='4326',
-        nuts_level='LEVL_0'
     )
 
 
-def get_regions_polygons():
-    nuts = NUTS()
-    return nuts.get(
+def get_countries_polygons_2():
+    countries = Countries()
+    return countries.get(
         spatial_type='RG',
-        nuts_level='LEVL_1',
     )
 
 
 if __name__ == '__main__':
     set_httpx_args(verify=False, timeout=10)
 
-    gdf = get_regions_polygons()
+    gdf = get_countries_points()
 
     if GEOPANDAS_AVAILABLE:
         gdf.plot()
