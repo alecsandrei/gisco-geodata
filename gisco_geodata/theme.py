@@ -50,6 +50,7 @@ Files = dict[str, list[str]]
 
 UNITS_REGION = '{unit}-region-{scale}-{projection}-{year}.geojson'
 UNITS_LABEL = '{unit}-label-{projection}-{year}.geojson'
+FILES = '{theme}_{spatial_type}_{scale}_{year}_{projection}.geojson'
 
 
 class GeoJSON(TypedDict):
@@ -216,6 +217,34 @@ class CoastalLines(ThemeParser):
         if name:
             self.name = name
         super().__init__(self.name)
+
+    @property
+    def default_dataset(self) -> Dataset:
+        return self.get_datasets()[-1]
+
+    def get(
+        self,
+        scale: Scale = '20M',
+        projection: Projection = '4326',
+        year: Optional[str] = None
+    ):
+        if year is None:
+            year = self.default_dataset.year
+        file = FILES.format(
+            theme=self.name,
+            spatial_type='RG',
+            scale=scale,
+            year=year,
+            projection=projection
+        )
+        coro = asyncio.run(
+            get_param(
+                self.name,
+                'geojson',
+                file
+            )
+        )
+        return from_geojson(cast(GeoJSON, coro))
 
 
 class Communes(ThemeParser):
