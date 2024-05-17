@@ -35,8 +35,6 @@ GEOPANDAS_AVAILABLE = geopandas_is_available()
 if GEOPANDAS_AVAILABLE:
     import geopandas as gpd
 
-SEMAPHORE = asyncio.Semaphore(50)
-
 PathLike = Union[Path, str]
 JSON = dict[str, Any]
 Projection = Literal['4326', '3035', '3857']
@@ -46,6 +44,7 @@ SpatialType = Literal['AT', 'BN', 'LB', 'RG']
 Geometry = Literal['point', 'geometry']
 CountryBoundary = Literal['INLAND', 'COASTL']
 NUTSLevel = Literal['LEVL_0', 'LEVL_1', 'LEVL_2', 'LEVL_3']
+UrbanAuditCategory = Literal['C', 'F']
 Units = dict[str, list[str]]
 Files = dict[str, list[str]]
 
@@ -457,6 +456,31 @@ class LocalAdministrativeUnits(ThemeParser):
             self.name = name
         super().__init__(self.name)
 
+    @property
+    def default_dataset(self) -> Dataset:
+        return self.get_datasets()[-1]
+
+    def get(
+        self,
+        *,
+        projection: Projection = '4326',
+        year: Optional[str] = None
+    ) -> Union[list[GeoJSON], gpd.GeoDataFrame]:
+        if year is None:
+            year = self.default_dataset.year
+        file = construct_param(
+            self.name,  # not consistent with self.name
+            'RG',
+            '01M',
+            year,
+            projection,
+            suffix='.geojson'
+        )
+        coro = asyncio.run(
+            get_param(self.name, 'geojson', file)
+        )
+        return from_geojson(cast(GeoJSON, coro))
+
 
 class NUTS(ThemeParser):
     name = Theme.NUTS.value
@@ -610,6 +634,147 @@ class UrbanAudit(ThemeParser):
         if name:
             self.name = name
         super().__init__(self.name)
+
+    @property
+    def default_dataset(self) -> Dataset:
+        return self.get_datasets()[-1]
+
+    async def get_units(self, year: Optional[str] = None) -> Units:
+        if year is None:
+            return await self.default_dataset.units
+        return await Dataset(self, year).units
+
+    async def _gather_files(
+        self,
+        category: Optional[UrbanAuditCategory] = None,
+        countries: Optional[Sequence[str]] = None,
+    ):
+        def filter_logic(k: str):
+            # Unit names have the schema "RO001F".
+            # We select the units that start with any provided
+            # country and endwith the provided category
+            conditions = []
+            if countries is not None:
+                conditions.append(
+                    any(k.startswith(country) for country in countries)
+                )
+            if category is not None:
+                conditions.append(k.endswith(category))
+            return all(conditions)
+        units = await self.get_units()
+        if category is None and countries is None:
+            return units
+        return filter(filter_logic, units)
+
+    async def _get_one(
+        self,
+        unit,
+        spatial_type,
+        scale,
+        projection,
+        year,
+        semaphore
+    ):
+        if spatial_type == 'RG':
+            param = UNITS_REGION.format(
+                unit=unit,
+                scale=scale,
+                projection=projection,
+                year=year
+            )
+        elif spatial_type == 'LB':
+            param = UNITS_LABEL.format(
+                unit=unit,
+                projection=projection,
+                year=year
+            )
+        else:
+            raise ValueError(
+                f'Wrong parameter {spatial_type}.'
+                'Allowed are "RG" and "LB".'
+            )
+        try:
+            async with semaphore:
+                geojson = cast(
+                    GeoJSON,
+                    await get_param(
+                        self.name, 'distribution', param
+                    )
+                )
+        except Exception:
+            raise
+        return geojson
+
+    async def _get_many(
+        self,
+        countries,
+        category,
+        spatial_type,
+        scale,
+        projection,
+        year
+    ):
+        semaphore = asyncio.Semaphore(50)
+        to_do = [
+            self._get_one(
+                unit, spatial_type, scale, projection, year, semaphore
+            )
+            for unit in await self._gather_files(category, countries)
+        ]
+        to_do_iter = asyncio.as_completed(to_do)
+        return await handle_completed_requests(coros=to_do_iter)
+
+    @overload
+    def get(
+        self,
+        *,
+        countries: Optional[Union[str, Sequence[str]]] = None,
+        category: Optional[UrbanAuditCategory] = None,
+        spatial_type: Literal['LB'] = 'LB',
+        projection: Projection = '4326',
+        year: Optional[str] = None,
+    ) -> Union[list[GeoJSON], gpd.GeoDataFrame]:
+        ...
+
+    @overload
+    def get(
+        self,
+        *,
+        spatial_type: Literal['RG'] = 'RG',
+        countries: Optional[Union[str, Sequence[str]]] = None,
+        category: Optional[UrbanAuditCategory] = None,
+        projection: Projection = '4326',
+        scale: Scale = '100K',
+        year: Optional[str] = None,
+    ) -> Union[list[GeoJSON], gpd.GeoDataFrame]:
+        ...
+
+    def get(
+        self,
+        *,
+        spatial_type: str = 'RG',
+        countries: Optional[Union[str, Sequence[str]]] = None,
+        category: Optional[UrbanAuditCategory] = None,
+        projection: str = '4326',
+        scale: str = '100K',
+        year: Optional[str] = None
+    ) -> Union[list[GeoJSON], gpd.GeoDataFrame]:
+        if isinstance(countries, str):
+            countries = [countries]
+        if year is None:
+            year = self.default_dataset.year
+        coro = self._get_many(
+            countries,
+            category,
+            spatial_type,
+            scale,
+            projection,
+            year
+        )
+        geojson = asyncio.run(coro)
+        if GEOPANDAS_AVAILABLE:
+            return from_geojson(geojson)
+        return geojson
 
 
 @dataclass
