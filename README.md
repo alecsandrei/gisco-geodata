@@ -12,6 +12,7 @@ python3 -m pip install .
 
 # Requirements
 - httpx
+- async-cache
 - Python >= 3.9
 - Optional: GeoPandas
 

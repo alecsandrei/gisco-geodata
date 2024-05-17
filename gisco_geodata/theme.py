@@ -109,6 +109,10 @@ class ThemeParser:
     def datasets(self) -> JSON:
         return get_datasets(self.name)
 
+    @property
+    def default_dataset(self) -> Dataset:
+        return self.get_datasets()[-1]
+
     def get_datasets(self) -> list[Dataset]:
         return (
             [Dataset(self, year.split('-')[-1])
@@ -217,10 +221,6 @@ class CoastalLines(ThemeParser):
             self.name = name
         super().__init__(self.name)
 
-    @property
-    def default_dataset(self) -> Dataset:
-        return self.get_datasets()[-1]
-
     def get(
         self,
         scale: Scale = '20M',
@@ -250,10 +250,6 @@ class Communes(ThemeParser):
         if name:
             self.name = name
         super().__init__(self.name)
-
-    @property
-    def default_dataset(self) -> Dataset:
-        return self.get_datasets()[-1]
 
     @overload
     def get(
@@ -321,10 +317,6 @@ class Countries(ThemeParser):
         if name:
             self.name = name
         super().__init__(self.name)
-
-    @property
-    def default_dataset(self) -> Dataset:
-        return self.get_datasets()[-1]
 
     async def get_units(self, year: Optional[str] = None) -> Units:
         if year is None:
@@ -456,10 +448,6 @@ class LocalAdministrativeUnits(ThemeParser):
             self.name = name
         super().__init__(self.name)
 
-    @property
-    def default_dataset(self) -> Dataset:
-        return self.get_datasets()[-1]
-
     def get(
         self,
         *,
@@ -489,10 +477,6 @@ class NUTS(ThemeParser):
         if name:
             self.name = name
         super().__init__(self.name)
-
-    @property
-    def default_dataset(self) -> Dataset:
-        return self.get_datasets()[-1]
 
     async def get_units(self, year: Optional[str] = None) -> Units:
         if year is None:
@@ -634,10 +618,6 @@ class UrbanAudit(ThemeParser):
         if name:
             self.name = name
         super().__init__(self.name)
-
-    @property
-    def default_dataset(self) -> Dataset:
-        return self.get_datasets()[-1]
 
     async def get_units(self, year: Optional[str] = None) -> Units:
         if year is None:
