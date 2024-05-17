@@ -26,7 +26,7 @@ from pathlib import Path
 from gisco_geodata import (
     NUTS,
     Countries,
-    set_requests_args
+    set_httpx_args
 )
 
 
@@ -35,7 +35,7 @@ if __name__ == '__main__':
         os.path.normpath(os.path.expanduser("~/Desktop"))
     )  # Desktop path
 
-    set_requests_args(verify=False)  # prevents SSLError in my case
+    set_httpx_args(verify=False)  # prevents SSLError in my case
 
     nuts = NUTS()
 
