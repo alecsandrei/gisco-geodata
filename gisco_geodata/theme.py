@@ -16,6 +16,8 @@ from functools import partial
 from enum import Enum
 from dataclasses import dataclass
 
+import httpx
+
 from .parser import (
     get_datasets,
     get_file,
@@ -323,7 +325,7 @@ class Countries(ThemeParser):
             return await self.default_dataset.units
         return await Dataset(self, year).units
 
-    async def _gather_files(
+    async def _gather_units(
         self,
         countries: Optional[Sequence[str]] = None,
     ):
@@ -386,10 +388,23 @@ class Countries(ThemeParser):
             self._get_one(
                 unit, spatial_type, scale, projection, year, semaphore
             )
-            for unit in await self._gather_files(countries)
+            for unit in await self._gather_units(countries)
         ]
         to_do_iter = asyncio.as_completed(to_do)
-        return await handle_completed_requests(coros=to_do_iter)
+        try:
+            result = await handle_completed_requests(coros=to_do_iter)
+        except httpx.HTTPStatusError as e:
+            e.add_note(
+                f"No unit was found for parameters:\n"
+                f"countries {', '.join(countries)},\n"
+                f"spatial type {spatial_type},\n"
+                f"scale {scale},\n"
+                f"projection {projection},\n"
+                f"year {year}"
+            )
+            raise
+        else:
+            return result
 
     @overload
     def get(
@@ -483,7 +498,7 @@ class NUTS(ThemeParser):
             return await self.default_dataset.units
         return await Dataset(self, year).units
 
-    async def _gather_files(
+    async def _gather_units(
         self,
         nuts_level: NUTSLevel,
         countries: Optional[Sequence[str]] = None,
@@ -553,10 +568,24 @@ class NUTS(ThemeParser):
             self._get_one(
                 unit, spatial_type, scale, projection, year, semaphore
             )
-            for unit in await self._gather_files(nuts_level, countries)
+            for unit in await self._gather_units(nuts_level, countries)
         ]
         to_do_iter = asyncio.as_completed(to_do)
-        return await handle_completed_requests(coros=to_do_iter)
+        try:
+            results = await handle_completed_requests(coros=to_do_iter)
+        except httpx.HTTPStatusError as e:
+            e.add_note(
+                f"No unit was found for parameters:\n"
+                f"countries {', '.join(countries)},\n"
+                f"NUTS level {nuts_level}, \n"
+                f"spatial type {spatial_type},\n"
+                f"scale {scale},\n"
+                f"projection {projection},\n"
+                f"year {year}"
+            )
+            raise
+        else:
+            return results
 
     @overload
     def get(
@@ -624,7 +653,7 @@ class UrbanAudit(ThemeParser):
             return await self.default_dataset.units
         return await Dataset(self, year).units
 
-    async def _gather_files(
+    async def _gather_units(
         self,
         category: Optional[UrbanAuditCategory] = None,
         countries: Optional[Sequence[str]] = None,
@@ -699,10 +728,24 @@ class UrbanAudit(ThemeParser):
             self._get_one(
                 unit, spatial_type, scale, projection, year, semaphore
             )
-            for unit in await self._gather_files(category, countries)
+            for unit in await self._gather_units(category, countries)
         ]
         to_do_iter = asyncio.as_completed(to_do)
-        return await handle_completed_requests(coros=to_do_iter)
+        try:
+            results = await handle_completed_requests(coros=to_do_iter)
+        except httpx.HTTPStatusError as e:
+            e.add_note(
+                f"No unit was found for parameters:\n"
+                f"countries {', '.join(countries)},\n"
+                f"category {category},\n"
+                f"spatial type {spatial_type},\n"
+                f"scale {scale},\n"
+                f"projection {projection},\n"
+                f"year {year}"
+            )
+            raise
+        else:
+            return results
 
     @overload
     def get(
@@ -817,9 +860,17 @@ class Dataset:
         file_name = asyncio.run(
             self.get_file_name_from_stem(file_format, file_stem_upper)
         )
-        assert file_name is not None, f'File not found: {file_stem}'
+        # assert file_name is not None, f'File not found: {file_stem}'
+        if file_name is None:
+            to_choose_from = asyncio.run(self.files)[file_format.lower()]
+            raise ValueError(
+                f'No file found for {file_stem_upper}\n'
+                f'Available to choose from:\n{'\n'.join(to_choose_from)}'
+            )
+
         content = get_file(
             self.theme_parser.name, file_format, file_name
         )
         with open(Path(out_dir) / file_name, 'wb') as f:
-            f.write(asyncio.run(content))
+            content = asyncio.run(content)
+            f.write(content)
