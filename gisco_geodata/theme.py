@@ -43,7 +43,6 @@ Projection = Literal['4326', '3035', '3857']
 FileFormat = Literal['csv', 'geojson', 'pbf', 'shp', 'svg', 'topojson']
 Scale = Literal['100K', '01M', '03M', '10M', '20M', '60M']
 SpatialType = Literal['AT', 'BN', 'LB', 'RG']
-Geometry = Literal['point', 'geometry']
 CountryBoundary = Literal['INLAND', 'COASTL']
 NUTSLevel = Literal['LEVL_0', 'LEVL_1', 'LEVL_2', 'LEVL_3']
 UrbanAuditCategory = Literal['C', 'F']
@@ -503,14 +502,12 @@ class NUTS(ThemeParser):
         nuts_level: NUTSLevel,
         countries: Optional[Sequence[str]] = None,
     ):
-        level = int(''.join(numbers_from(nuts_level)))
-
         def filter_logic(k: str):
             conditions = []
             if countries is not None:
                 conditions.append(k in countries)
             conditions.append(
-                len(numbers_from(k)) == level
+                len(k)-2 == int(nuts_level[-1])
             )
             return all(conditions)
         return filter(filter_logic, await self.get_units())

@@ -9,7 +9,6 @@ from typing import (
     Union,
     Iterator,
 )
-from functools import lru_cache
 import asyncio
 
 import httpx
