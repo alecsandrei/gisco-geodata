@@ -5,7 +5,6 @@ from typing import (
     Any,
     TypedDict,
     Sequence,
-    Union,
     Literal,
     Optional,
     overload,
@@ -26,7 +25,6 @@ from .parser import (
 )
 from .utils import (
     geopandas_is_available,
-    numbers_from,
     handle_completed_requests,
     construct_param,
     from_geojson
@@ -37,7 +35,7 @@ GEOPANDAS_AVAILABLE = geopandas_is_available()
 if GEOPANDAS_AVAILABLE:
     import geopandas as gpd
 
-PathLike = Union[Path, str]
+PathLike = Path | str
 JSON = dict[str, Any]
 Projection = Literal['4326', '3035', '3857']
 FileFormat = Literal['csv', 'geojson', 'pbf', 'shp', 'svg', 'topojson']
@@ -259,7 +257,7 @@ class Communes(ThemeParser):
         spatial_type: SpatialType,
         projection: Projection,
         year: Optional[str] = None
-    ) -> Union[list[GeoJSON], gpd.GeoDataFrame]:
+    ) -> list[GeoJSON] | gpd.GeoDataFrame:
         ...
 
     @overload
@@ -270,7 +268,7 @@ class Communes(ThemeParser):
         scale: Scale,
         projection: Projection,
         year: Optional[str] = None
-    ) -> Union[list[GeoJSON], gpd.GeoDataFrame]:
+    ) -> list[GeoJSON] | gpd.GeoDataFrame:
         ...
 
     @overload
@@ -282,7 +280,7 @@ class Communes(ThemeParser):
         projection: Projection,
         country_boundary: CountryBoundary,
         year: Optional[str] = None
-    ) -> Union[list[GeoJSON], gpd.GeoDataFrame]:
+    ) -> list[GeoJSON] | gpd.GeoDataFrame:
         ...
 
     def get(
@@ -293,7 +291,7 @@ class Communes(ThemeParser):
         scale: Optional[Scale] = None,
         country_boundary: Optional[CountryBoundary] = None,
         year: Optional[str] = None
-    ) -> Union[list[GeoJSON], gpd.GeoDataFrame]:
+    ) -> list[GeoJSON] | gpd.GeoDataFrame:
         if year is None:
             year = self.default_dataset.year
         file = construct_param(
@@ -409,34 +407,34 @@ class Countries(ThemeParser):
     def get(
         self,
         *,
-        countries: Optional[Union[str, Sequence[str]]] = None,
+        countries: Optional[str | Sequence[str]] = None,
         spatial_type: Literal['LB'],
         projection: Projection = '4326',
         year: Optional[str] = None,
-    ) -> Union[list[GeoJSON], gpd.GeoDataFrame]:
+    ) -> list[GeoJSON] | gpd.GeoDataFrame:
         ...
 
     @overload
     def get(
         self,
         *,
-        countries: Optional[Union[str, Sequence[str]]] = None,
+        countries: Optional[str | Sequence[str]] = None,
         spatial_type: Literal['RG'],
         scale: Scale = '20M',
         projection: Projection = '4326',
         year: Optional[str] = None,
-    ) -> Union[list[GeoJSON], gpd.GeoDataFrame]:
+    ) -> list[GeoJSON] | gpd.GeoDataFrame:
         ...
 
     def get(
         self,
         *,
-        countries: Optional[Union[str, Sequence[str]]] = None,
+        countries: Optional[str | Sequence[str]] = None,
         spatial_type: str = 'RG',
         projection: str = '4326',
         scale: Optional[str] = '20M',
         year: Optional[str] = None,
-    ) -> Union[list[GeoJSON], gpd.GeoDataFrame]:
+    ) -> list[GeoJSON] | gpd.GeoDataFrame:
         if isinstance(countries, str):
             countries = [countries]
         if year is None:
@@ -467,7 +465,7 @@ class LocalAdministrativeUnits(ThemeParser):
         *,
         projection: Projection = '4326',
         year: Optional[str] = None
-    ) -> Union[list[GeoJSON], gpd.GeoDataFrame]:
+    ) -> list[GeoJSON] | gpd.GeoDataFrame:
         if year is None:
             year = self.default_dataset.year
         file = construct_param(
@@ -588,37 +586,37 @@ class NUTS(ThemeParser):
     def get(
         self,
         *,
-        countries: Optional[Union[str, Sequence[str]]] = None,
+        countries: Optional[str | Sequence[str]] = None,
         nuts_level: NUTSLevel = 'LEVL_0',
         spatial_type: Literal['LB'] = 'LB',
         projection: Projection = '4326',
         year: Optional[str] = None,
-    ) -> Union[list[GeoJSON], gpd.GeoDataFrame]:
+    ) -> list[GeoJSON] | gpd.GeoDataFrame:
         ...
 
     @overload
     def get(
         self,
         *,
-        countries: Optional[Union[str, Sequence[str]]] = None,
+        countries: Optional[str | Sequence[str]] = None,
         nuts_level: NUTSLevel = 'LEVL_0',
         spatial_type: Literal['RG'] = 'RG',
         scale: Scale = '20M',
         projection: Projection = '4326',
         year: Optional[str] = None,
-    ) -> Union[list[GeoJSON], gpd.GeoDataFrame]:
+    ) -> list[GeoJSON] | gpd.GeoDataFrame:
         ...
 
     def get(
         self,
         *,
-        countries: Optional[Union[str, Sequence[str]]] = None,
+        countries: Optional[str | Sequence[str]] = None,
         nuts_level: NUTSLevel = 'LEVL_0',
         spatial_type: str = 'RG',
         projection: str = '4326',
         scale: Optional[str] = '20M',
         year: Optional[str] = None
-    ) -> Union[list[GeoJSON], gpd.GeoDataFrame]:
+    ) -> list[GeoJSON] | gpd.GeoDataFrame:
         if isinstance(countries, str):
             countries = [countries]
         if year is None:
@@ -709,7 +707,8 @@ class UrbanAudit(ThemeParser):
                 )
         except Exception:
             raise
-        return geojson
+        else:
+            return geojson
 
     async def _get_many(
         self,
@@ -748,12 +747,12 @@ class UrbanAudit(ThemeParser):
     def get(
         self,
         *,
-        countries: Optional[Union[str, Sequence[str]]] = None,
+        countries: Optional[str | Sequence[str]] = None,
         category: Optional[UrbanAuditCategory] = None,
         spatial_type: Literal['LB'] = 'LB',
         projection: Projection = '4326',
         year: Optional[str] = None,
-    ) -> Union[list[GeoJSON], gpd.GeoDataFrame]:
+    ) -> list[GeoJSON] | gpd.GeoDataFrame:
         ...
 
     @overload
@@ -761,24 +760,24 @@ class UrbanAudit(ThemeParser):
         self,
         *,
         spatial_type: Literal['RG'] = 'RG',
-        countries: Optional[Union[str, Sequence[str]]] = None,
+        countries: Optional[str | Sequence[str]] = None,
         category: Optional[UrbanAuditCategory] = None,
         projection: Projection = '4326',
         scale: Scale = '100K',
         year: Optional[str] = None,
-    ) -> Union[list[GeoJSON], gpd.GeoDataFrame]:
+    ) -> list[GeoJSON] | gpd.GeoDataFrame:
         ...
 
     def get(
         self,
         *,
         spatial_type: str = 'RG',
-        countries: Optional[Union[str, Sequence[str]]] = None,
+        countries: Optional[str | Sequence[str]] = None,
         category: Optional[UrbanAuditCategory] = None,
         projection: str = '4326',
         scale: str = '100K',
         year: Optional[str] = None
-    ) -> Union[list[GeoJSON], gpd.GeoDataFrame]:
+    ) -> list[GeoJSON] | gpd.GeoDataFrame:
         if isinstance(countries, str):
             countries = [countries]
         if year is None:

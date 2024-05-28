@@ -6,7 +6,7 @@ from typing import (
     Sequence,
     cast,
     TypeVar,
-    Union,
+    Optional,
     Iterator,
 )
 import asyncio
@@ -30,17 +30,13 @@ def geopandas_is_available() -> bool:
     return is_package_installed('geopandas')
 
 
-def numbers_from(string: str) -> list[str]:
-    return [char for char in string if char.isdigit()]
-
-
 def from_geojson(
-    geojsons: Union[GeoJSON, Sequence[GeoJSON]]
+    geojsons: GeoJSON | Sequence[GeoJSON]
 ) -> gpd.GeoDataFrame:
     """Created a GeoDataFrame from GeoJSON.
 
     Args:
-        geojsons (Union[GeoJSON, Sequence[GeoJSON]]): GeoJSON information.
+        geojsons (GeoJSON | Sequence[GeoJSON]): GeoJSON information.
 
     Returns:
         GeoDataFrame: The GeoDataFrame describing the GeoJSONs.
@@ -85,13 +81,11 @@ async def handle_completed_requests(
             raise
         except KeyboardInterrupt:
             break
-    # for coro in coros:
-    #     json.append(await coro)
     return json
 
 
 def construct_param(
-    *args: Union[str, None],
+    *args: Optional[str],
     delimiter: str = '_',
     suffix: str = ''
 ):
