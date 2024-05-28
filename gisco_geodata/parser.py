@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 from urllib.parse import urljoin
-from typing import Any
+from typing import (
+    Any,
+    overload,
+    Literal
+)
 from functools import lru_cache
 
 import httpx
@@ -47,15 +51,37 @@ async def get_file(theme: str, file_format: str, file: str) -> bytes:
         return resp.content
 
 
+@overload
+async def get_param(
+    theme: str,
+    *params: str,
+    return_type: Literal['bytes']
+) -> bytes:
+    ...
+
+
+@overload
+async def get_param(
+    theme: str,
+    *params: str,
+    return_type: Literal['json'] = 'json'
+) -> JSON:
+    ...
+
+
 @AsyncLRU()
 async def get_param(
     theme: str,
     *params: str,
-) -> JSON:
+    return_type: Literal['bytes', 'json'] = 'json'
+) -> JSON | bytes:
     async with httpx.AsyncClient(**HTTPX_KWARGS) as client:
         resp = await client.get(
             PARAMS_URL.format(theme=theme, params='/'.join(params)),
             follow_redirects=True
         )
         resp.raise_for_status()
-        return resp.json()
+        if return_type == 'json':
+            return resp.json()
+        else:
+            return resp.content

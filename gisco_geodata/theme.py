@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import os
 import asyncio
+import datetime
 from typing import (
     Any,
     TypedDict,
@@ -27,7 +29,7 @@ from .parser import (
 from .utils import (
     geopandas_is_available,
     handle_completed_requests,
-    from_geojson
+    gdf_from_geojson
 )
 
 
@@ -50,6 +52,7 @@ NUTSLevel = Literal['LEVL_0', 'LEVL_1', 'LEVL_2', 'LEVL_3']
 UrbanAuditCategory = Literal['C', 'F']
 Units = dict[str, list[str]]
 Files = dict[str, list[str]]
+Packages = dict[str, dict]
 
 UNITS_REGION = '{unit}-region-{scale}-{projection}-{year}.geojson'
 UNITS_LABEL = '{unit}-label-{projection}-{year}.geojson'
@@ -68,9 +71,69 @@ class TitleMultilingual(TypedDict):
 
 
 class Metadata(TypedDict):
-    pdf: str
+    pdf: PDF
     url: str
-    xml: str
+    xml: XML
+
+
+@dataclass
+class MetadataFile:
+    file_name: str
+    dataset: Dataset
+
+    def download(
+        self,
+        out_file: PathLike,
+        open_file: bool = True
+    ):
+        with open(out_file, mode='wb') as f:
+            bytes_ = asyncio.run(
+                get_param(
+                    self.dataset.theme_parser.name,
+                    self.file_name,
+                    return_type='bytes'
+                )
+            )
+            f.write(bytes_)
+        if open_file:
+            os.startfile(out_file)
+
+
+class PDF(MetadataFile):
+    ...
+
+
+class XML(MetadataFile):
+    ...
+
+
+@dataclass
+class Documentation:
+    dataset: Dataset
+    file_name: str
+
+    @property
+    def content(self) -> bytes:
+        return asyncio.run(
+            get_param(
+                self.dataset.theme_parser.name,
+                self.file_name,
+                return_type='bytes'
+            )
+        )
+
+    def text(self, encoding: str = 'utf-8') -> str:
+        return self.content.decode(encoding=encoding)
+
+    def save(
+        self,
+        out_file: PathLike,
+        open_file: bool = True
+    ):
+        with open(out_file, mode='wb') as f:
+            f.write(self.content)
+        if open_file:
+            os.startfile(out_file)
 
 
 class Property(Enum):
@@ -107,6 +170,18 @@ class ThemeParser:
     @property
     def properties(self) -> JSON:
         return get_themes()[self.name]
+
+    @property
+    def title_multilingual(self) -> Optional[TitleMultilingual]:
+        return self.properties.get(
+            Property.TITLE_MULTILINGUAL.value, None
+        )
+
+    @property
+    def title(self) -> Optional[str]:
+        return self.properties.get(
+            Property.TITLE.value, None
+        )
 
     @property
     def datasets(self) -> JSON:
@@ -272,8 +347,8 @@ class Countries(ThemeParser):
 
     async def get_units(self, year: Optional[str] = None) -> Units:
         if year is None:
-            return await self.default_dataset.units
-        return await Dataset(self, year).units
+            return await self.default_dataset.get_units()
+        return await Dataset(self, year).get_units()
 
     async def _gather_units(
         self,
@@ -401,7 +476,7 @@ class Countries(ThemeParser):
         )
         geojson = asyncio.run(coro)
         if GEOPANDAS_AVAILABLE:
-            return from_geojson(geojson)
+            return gdf_from_geojson(geojson)
         return geojson
 
 
@@ -415,8 +490,8 @@ class NUTS(ThemeParser):
 
     async def get_units(self, year: Optional[str] = None) -> Units:
         if year is None:
-            return await self.default_dataset.units
-        return await Dataset(self, year).units
+            return await self.default_dataset.get_units()
+        return await Dataset(self, year).get_units()
 
     async def _gather_units(
         self,
@@ -554,7 +629,7 @@ class NUTS(ThemeParser):
         )
         geojson = asyncio.run(coro)
         if GEOPANDAS_AVAILABLE:
-            return from_geojson(geojson)
+            return gdf_from_geojson(geojson)
         return geojson
 
 
@@ -568,8 +643,8 @@ class UrbanAudit(ThemeParser):
 
     async def get_units(self, year: Optional[str] = None) -> Units:
         if year is None:
-            return await self.default_dataset.units
-        return await Dataset(self, year).units
+            return await self.default_dataset.get_units()
+        return await Dataset(self, year).get_units()
 
     async def _gather_units(
         self,
@@ -715,7 +790,7 @@ class UrbanAudit(ThemeParser):
         )
         geojson = asyncio.run(coro)
         if GEOPANDAS_AVAILABLE:
-            return from_geojson(geojson)
+            return gdf_from_geojson(geojson)
         return geojson
 
 
@@ -734,26 +809,112 @@ class Dataset:
         ]
 
     @property
-    async def units(self) -> Units:
-        return await get_param(
-            self.theme_parser.name, self.get_property(Property.UNITS.value)
+    def date(self) -> datetime.datetime:
+        # Datetime from gisco services has schema day/month/year
+        # e.g. 01/12/2003
+        return datetime.datetime(
+            *map(
+                int,
+                self.properties[Property.DATE.value].split('/')[::-1]
+            )  # type: ignore
         )
 
     @property
-    async def files(self) -> Files:
+    def documentation(self) -> Optional[Documentation]:
+        return self.get_documentation()
+
+    @property
+    def title(self) -> Optional[str]:
+        return self.properties.get(
+            Property.TITLE.value, None
+        )
+
+    @property
+    def title_multilingual(self) -> Optional[TitleMultilingual]:
+        return self.properties[Property.TITLE_MULTILINGUAL.value]
+
+    @property
+    def hashtag(self) -> Optional[str]:
+        return self.properties[Property.HASHTAG.value]
+
+    @property
+    def metadata(self) -> Optional[Metadata]:
+        return self.get_metadata()
+
+    @property
+    def units(self) -> Optional[Units]:
+        return asyncio.run(self.get_units())
+
+    @property
+    def files(self) -> Files:
+        return asyncio.run(self.get_files())
+
+    @property
+    def packages(self) -> Optional[Packages]:
+        return self.get_packages()
+
+    def get_documentation(self) -> Optional[Documentation]:
+        documentation = self.properties.get(
+            Property.DOCUMENTATION.value, None
+        )
+        if documentation is None:
+            return None
+        return Documentation(
+            self,
+            documentation
+        )
+
+    def get_packages(self) -> Optional[Packages]:
+        # TODO: Maybe improve this somehow later on?
+        packages = self.properties.get(
+            Property.PACKAGES.value, None
+        )
+        if packages is None:
+            return None
+        return asyncio.run(
+            get_param(self.theme_parser.name, packages)
+        )
+
+    def get_metadata(self) -> Optional[Metadata]:
+        # We do an isinstance check because it was possible that
+        # the value was set before, metadata could be stored
+        # by async lru cache.
+        metadata_props = self.properties.get(
+            Property.METADATA.value, None
+        )
+        if metadata_props is None:
+            return None
+        if not isinstance(metadata_props['pdf'], MetadataFile):
+            metadata_props['pdf'] = MetadataFile(
+                metadata_props['pdf'],
+                dataset=self
+            )
+        if not isinstance(metadata_props['xml'], MetadataFile):
+            metadata_props['xml'] = MetadataFile(
+                metadata_props['xml'],
+                dataset=self
+            )
+        return metadata_props
+
+    async def get_files(self) -> Files:
         return await get_param(
             self.theme_parser.name, self.get_property(Property.FILES.value)
+        )
+
+    async def get_units(self) -> Units:
+        return await get_param(
+            self.theme_parser.name, self.get_property(Property.UNITS.value)
         )
 
     def get_property(self, property: str) -> Any:
         return self.properties[property]
 
-    async def get_file_name_from_stem(
+    def get_file_name_from_stem(
         self,
         file_format: str,
         file_stem: str
     ) -> Optional[str]:
-        json_ = (await self.files)[file_format]
+        json_ = self.files[file_format]
         for value in json_:
             # We check against 'SPATIALTYPE_YEAR_PROJECTION' etc.
             # instead of 'THEME_SPATIALTYPE_YEAR_PROJECTION'.
@@ -770,14 +931,14 @@ class Dataset:
         file_format: str,
         out_dir: Optional[PathLike]
     ) -> Optional[GeoJSON | gpd.GeoDataFrame]:
-        if out_dir is None and file_format not in ['geojson']:
+        if out_dir is None and file_format != 'geojson':
             raise ValueError(
                 'out_dir can only be none ',
                 'if the file format is geojson.'
             )
         if (
             out_dir is None
-            and file_format in ['geojson']
+            and file_format == 'geojson'
             and not GEOPANDAS_AVAILABLE
         ):
             raise ValueError(
@@ -790,12 +951,10 @@ class Dataset:
         # which can't be parsed from anywhere.
         file_stem = '_'.join(arg for arg in args[1:] if arg is not None)
         file_stem_upper = file_stem.upper()
-        file_name = asyncio.run(
-            self.get_file_name_from_stem(file_format, file_stem_upper)
-        )
+        file_name = self.get_file_name_from_stem(file_format, file_stem_upper)
         if file_name is None:
             to_choose_from = '\n'.join(
-                asyncio.run(self.files)[file_format.lower()]
+                self.files[file_format.lower()]
             )
             raise ValueError(
                 f'No file found for {file_stem_upper}\n' +
@@ -817,6 +976,6 @@ class Dataset:
                 )
             )
             if GEOPANDAS_AVAILABLE and file_format == 'geojson':
-                return from_geojson(coro)
+                return gdf_from_geojson(coro)
             else:
                 return coro

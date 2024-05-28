@@ -29,7 +29,7 @@ def geopandas_is_available() -> bool:
     return is_package_installed('geopandas')
 
 
-def from_geojson(
+def gdf_from_geojson(
     geojsons: GeoJSON | Sequence[GeoJSON]
 ) -> gpd.GeoDataFrame:
     """Created a GeoDataFrame from GeoJSON.
