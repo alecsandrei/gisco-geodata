@@ -52,9 +52,9 @@ def main():
     set_httpx_args(verify=False, timeout=10)
 
     nuts_1 = get_regions_polygons()
-    subset = get_countries_subset()
-    points = get_countries_points()
-    nuts_0 = get_countries_polygons()
+    _ = get_countries_subset()
+    _ = get_countries_points()
+    _ = get_countries_polygons()
 
     if GEOPANDAS_AVAILABLE:
         nuts_1.plot()

@@ -857,12 +857,13 @@ class Dataset:
         file_name = asyncio.run(
             self.get_file_name_from_stem(file_format, file_stem_upper)
         )
-        # assert file_name is not None, f'File not found: {file_stem}'
         if file_name is None:
-            to_choose_from = asyncio.run(self.files)[file_format.lower()]
+            to_choose_from = '\n'.join(
+                asyncio.run(self.files)[file_format.lower()]
+            )
             raise ValueError(
-                f'No file found for {file_stem_upper}\n'
-                f'Available to choose from:\n{'\n'.join(to_choose_from)}'
+                f'No file found for {file_stem_upper}\n' +
+                f"Available to choose from:\n{to_choose_from}"
             )
 
         content = get_file(

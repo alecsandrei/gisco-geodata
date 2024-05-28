@@ -17,6 +17,7 @@ def get_cities():
         category='C'
     )
 
+
 def get_functional_urban_areas():
     """Choose two countries."""
     countries = UrbanAudit()
