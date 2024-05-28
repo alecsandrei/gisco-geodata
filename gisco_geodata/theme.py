@@ -29,7 +29,10 @@ from .utils import (
     from_geojson
 )
 
+
+SEMAPHORE_VALUE = 50
 GEOPANDAS_AVAILABLE = geopandas_is_available()
+
 
 if GEOPANDAS_AVAILABLE:
     import geopandas as gpd
@@ -329,7 +332,7 @@ class Countries(ThemeParser):
         projection,
         year
     ):
-        semaphore = asyncio.Semaphore(50)
+        semaphore = asyncio.Semaphore(SEMAPHORE_VALUE)
         to_do = [
             self._get_one(
                 unit, spatial_type, scale, projection, year, semaphore
@@ -477,7 +480,7 @@ class NUTS(ThemeParser):
         projection,
         year
     ):
-        semaphore = asyncio.Semaphore(50)
+        semaphore = asyncio.Semaphore(SEMAPHORE_VALUE)
         to_do = [
             self._get_one(
                 unit, spatial_type, scale, projection, year, semaphore
@@ -638,7 +641,7 @@ class UrbanAudit(ThemeParser):
         projection,
         year
     ):
-        semaphore = asyncio.Semaphore(50)
+        semaphore = asyncio.Semaphore(SEMAPHORE_VALUE)
         to_do = [
             self._get_one(
                 unit, spatial_type, scale, projection, year, semaphore

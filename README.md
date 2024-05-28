@@ -25,7 +25,8 @@ from pathlib import Path
 from gisco_geodata import (
     NUTS,
     Countries,
-    set_httpx_args
+    set_httpx_args,
+    set_semaphore_value
 )
 
 
@@ -35,6 +36,7 @@ if __name__ == '__main__':
     )  # Desktop path
 
     set_httpx_args(verify=False)  # prevents SSLError in my case
+    set_semaphore_value(20) # the maximum number of asynchronous API calls
 
     nuts = NUTS()
 

@@ -16,11 +16,6 @@ HTTPX_KWARGS = {}
 JSON = dict[str, Any]
 
 
-def set_httpx_args(**kwargs):
-    for k, v in kwargs.items():
-        HTTPX_KWARGS[k] = v
-
-
 @lru_cache
 def get_themes() -> JSON:
     resp = httpx.get(THEMES_URL, **HTTPX_KWARGS)

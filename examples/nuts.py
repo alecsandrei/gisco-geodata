@@ -1,7 +1,8 @@
 from gisco_geodata.theme import GEOPANDAS_AVAILABLE
 from gisco_geodata import (
     NUTS,
-    set_httpx_args
+    set_httpx_args,
+    set_semaphore_value
 )
 
 if GEOPANDAS_AVAILABLE:
@@ -49,6 +50,7 @@ def get_regions_polygons():
 
 
 def main():
+    set_semaphore_value(50)
     set_httpx_args(verify=False, timeout=10)
 
     nuts_1 = get_regions_polygons()
