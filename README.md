@@ -2,10 +2,18 @@ Can be used to download geodata from the [GISCO API](https://gisco-services.ec.e
 
 # Installation
 
+## Unreleased version
+
 ```sh
 git clone https://github.com/alecsandrei/gisco-geodata.git
 cd gisco-geodata
 python3 -m pip install .
+```
+
+## PyPI
+
+```sh
+pip install gisco-geodata
 ```
 
 # Requirements
