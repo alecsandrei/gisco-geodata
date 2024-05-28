@@ -1,7 +1,5 @@
 Can be used to download geodata from the [GISCO API](https://gisco-services.ec.europa.eu/distribution/v2/).
 
-[currently under development, functionality is limited]
-
 # Installation
 
 ```sh
@@ -122,3 +120,11 @@ if __name__ == "__main__":
     plt.show()
 
 ```
+
+# Disclaimer
+
+This plugin, Eurostat Downloader, is an independent project created by Cuvuliuc Alex-Andrei. It is not an official product of Eurostat, and Cuvuliuc Alex-Andrei is not affiliated, associated, authorized, endorsed by, or in any way officially connected with Eurostat or any of its subsidiaries or its affiliates.
+
+# Copyright notice
+
+Before using this package, please read the information [provided by Eurostat](https://ec.europa.eu/eurostat/web/gisco/geodata).
