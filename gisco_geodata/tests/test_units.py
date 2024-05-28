@@ -21,6 +21,8 @@ def test_get_countries():
     assert isinstance(units['RO'], list)
     geojson = COUNTRIES.get(countries=['RO', 'IT'], spatial_type='RG')
     assert isinstance(geojson, list)
+    for geojson_ in geojson:
+        assert all(key in geojson_ for key in ['crs', 'features', 'type'])
     setattr(theme, 'GEOPANDAS_AVAILABLE', True)
     geojson = COUNTRIES.get(countries=['RO', 'IT'], spatial_type='RG')
     assert isinstance(geojson, gpd.GeoDataFrame)

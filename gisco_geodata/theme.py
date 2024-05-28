@@ -26,7 +26,6 @@ from .parser import (
 from .utils import (
     geopandas_is_available,
     handle_completed_requests,
-    construct_param,
     from_geojson
 )
 
@@ -34,6 +33,7 @@ GEOPANDAS_AVAILABLE = geopandas_is_available()
 
 if GEOPANDAS_AVAILABLE:
     import geopandas as gpd
+
 
 PathLike = Path | str
 JSON = dict[str, Any]
@@ -128,77 +128,96 @@ class ThemeParser:
     def download(
         self,
         *,
-        file_format: FileFormat,
-        out_dir: PathLike,
-        year: str,
-        spatial_type: SpatialType,
-        scale: Optional[Scale] = None,
-        projection: Optional[Projection] = None,
-        country_boundary: Optional[CountryBoundary] = None,
-        **kwargs: str
-    ):
-        ...
-
-    @overload
-    def download(
-        self,
-        *,
-        file_format: str,
-        out_dir: PathLike,
-        year: str,
         spatial_type: str,
-        scale: Optional[str] = None,
-        projection: Optional[str] = None,
-        country_boundary: Optional[CountryBoundary] = None,
-        **kwargs: str
-    ):
-        ...
-
-    @overload
-    def download(
-        self,
-        *,
-        file_format: FileFormat,
-        out_dir: PathLike,
-        year: str,
-        spatial_type: SpatialType,
-        scale: Optional[Scale] = None,
-        projection: Optional[Projection] = None,
-        nuts_level: Optional[NUTSLevel] = None,
-        **kwargs: str
-    ):
-        ...
-
-    @overload
-    def download(
-        self,
-        *,
-        file_format: str,
-        out_dir: PathLike,
-        year: str,
-        spatial_type: str,
-        scale: Optional[str] = None,
-        projection: Optional[str] = None,
-        nuts_level: Optional[str] = None,
-        **kwargs: str
-    ):
-        ...
-
-    def download(
-        self,
-        *,
-        file_format: str,
-        out_dir: PathLike,
-        year: str,
-        spatial_type: str,
+        year: Optional[str] = None,
+        file_format: Literal['geojson'] = 'geojson',
+        out_dir: Literal[None] = None,
         scale: Optional[str] = None,
         projection: Optional[str] = None,
         country_boundary: Optional[str] = None,
         nuts_level: Optional[str] = None,
         **kwargs: str
-    ):
+    ) -> GeoJSON | gpd.GeoDataFrame:
+        ...
 
-        self.get_dataset(year)._download(
+    @overload
+    def download(
+        self,
+        *,
+        file_format: FileFormat,
+        out_dir: PathLike,
+        spatial_type: SpatialType,
+        year: Optional[str] = None,
+        scale: Optional[Scale] = None,
+        projection: Optional[Projection] = None,
+        country_boundary: Optional[CountryBoundary] = None,
+        **kwargs: str
+    ) -> None:
+        ...
+
+    @overload
+    def download(
+        self,
+        *,
+        file_format: str,
+        out_dir: PathLike,
+        spatial_type: str,
+        year: Optional[str] = None,
+        scale: Optional[str] = None,
+        projection: Optional[str] = None,
+        country_boundary: Optional[CountryBoundary] = None,
+        **kwargs: str
+    ) -> None:
+        ...
+
+    @overload
+    def download(
+        self,
+        *,
+        file_format: FileFormat,
+        out_dir: PathLike,
+        spatial_type: SpatialType,
+        year: Optional[str] = None,
+        scale: Optional[Scale] = None,
+        projection: Optional[Projection] = None,
+        nuts_level: Optional[NUTSLevel] = None,
+        **kwargs: str
+    ) -> None:
+        ...
+
+    @overload
+    def download(
+        self,
+        *,
+        file_format: str,
+        out_dir: PathLike,
+        spatial_type: str,
+        year: Optional[str] = None,
+        scale: Optional[str] = None,
+        projection: Optional[str] = None,
+        nuts_level: Optional[str] = None,
+        **kwargs: str
+    ) -> None:
+        ...
+
+    def download(
+        self,
+        *,
+        spatial_type: str,
+        file_format: Optional[str] = None,
+        year: Optional[str] = None,
+        out_dir: Optional[PathLike] = None,
+        scale: Optional[str] = None,
+        projection: Optional[str] = None,
+        country_boundary: Optional[str] = None,
+        nuts_level: Optional[str] = None,
+        **kwargs: str
+    ) -> Optional[GeoJSON | gpd.GeoDataFrame]:
+        if year is None:
+            year = self.default_dataset.year
+        if file_format is None:
+            file_format = 'geojson'
+        return self.get_dataset(year)._download(
             self.name,
             spatial_type,
             scale,
@@ -220,27 +239,6 @@ class CoastalLines(ThemeParser):
             self.name = name
         super().__init__(self.name)
 
-    def get(
-        self,
-        scale: Scale = '20M',
-        projection: Projection = '4326',
-        year: Optional[str] = None
-    ):
-        if year is None:
-            year = self.default_dataset.year
-        file = (
-            construct_param(
-                self.name,
-                'RG',
-                scale,
-                year,
-                projection,
-                suffix='.geojson'
-            )
-        )
-        coro = asyncio.run(get_param(self.name, 'geojson', file))
-        return from_geojson(cast(GeoJSON, coro))
-
 
 class Communes(ThemeParser):
     name = Theme.COMMUNES.value
@@ -250,63 +248,14 @@ class Communes(ThemeParser):
             self.name = name
         super().__init__(self.name)
 
-    @overload
-    def get(
-        self,
-        *,
-        spatial_type: SpatialType,
-        projection: Projection,
-        year: Optional[str] = None
-    ) -> list[GeoJSON] | gpd.GeoDataFrame:
-        ...
 
-    @overload
-    def get(
-        self,
-        *,
-        spatial_type: SpatialType,
-        scale: Scale,
-        projection: Projection,
-        year: Optional[str] = None
-    ) -> list[GeoJSON] | gpd.GeoDataFrame:
-        ...
+class LocalAdministrativeUnits(ThemeParser):
+    name = Theme.LOCAL_ADMINISTRATIVE_UNITS.value
 
-    @overload
-    def get(
-        self,
-        *,
-        spatial_type: SpatialType,
-        scale: Scale,
-        projection: Projection,
-        country_boundary: CountryBoundary,
-        year: Optional[str] = None
-    ) -> list[GeoJSON] | gpd.GeoDataFrame:
-        ...
-
-    def get(
-        self,
-        *,
-        spatial_type: SpatialType = 'RG',
-        projection: Projection = '4326',
-        scale: Optional[Scale] = None,
-        country_boundary: Optional[CountryBoundary] = None,
-        year: Optional[str] = None
-    ) -> list[GeoJSON] | gpd.GeoDataFrame:
-        if year is None:
-            year = self.default_dataset.year
-        file = construct_param(
-            'comm',  # not consistent with self.name
-            spatial_type,
-            scale,
-            year,
-            projection,
-            country_boundary,
-            suffix='.geojson'
-        )
-        coro = asyncio.run(
-            get_param(self.name, 'geojson', file)
-        )
-        return from_geojson(cast(GeoJSON, coro))
+    def __init__(self, name: Optional[str] = None):
+        if name:
+            self.name = name
+        super().__init__(self.name)
 
 
 class Countries(ThemeParser):
@@ -450,36 +399,6 @@ class Countries(ThemeParser):
         if GEOPANDAS_AVAILABLE:
             return from_geojson(geojson)
         return geojson
-
-
-class LocalAdministrativeUnits(ThemeParser):
-    name = Theme.LOCAL_ADMINISTRATIVE_UNITS.value
-
-    def __init__(self, name: Optional[str] = None):
-        if name:
-            self.name = name
-        super().__init__(self.name)
-
-    def get(
-        self,
-        *,
-        projection: Projection = '4326',
-        year: Optional[str] = None
-    ) -> list[GeoJSON] | gpd.GeoDataFrame:
-        if year is None:
-            year = self.default_dataset.year
-        file = construct_param(
-            self.name,  # not consistent with self.name
-            'RG',
-            '01M',
-            year,
-            projection,
-            suffix='.geojson'
-        )
-        coro = asyncio.run(
-            get_param(self.name, 'geojson', file)
-        )
-        return from_geojson(cast(GeoJSON, coro))
 
 
 class NUTS(ThemeParser):
@@ -845,8 +764,22 @@ class Dataset:
         self,
         *args: Optional[str],
         file_format: str,
-        out_dir: PathLike
-    ):
+        out_dir: Optional[PathLike]
+    ) -> Optional[GeoJSON | gpd.GeoDataFrame]:
+        if out_dir is None and file_format not in ['geojson']:
+            raise ValueError(
+                'out_dir can only be none ',
+                'if the file format is geojson.'
+            )
+        if (
+            out_dir is None
+            and file_format in ['geojson']
+            and not GEOPANDAS_AVAILABLE
+        ):
+            raise ValueError(
+                'Geopandas needs to be installed if out_dir is not provided ',
+                'and the file_format is geojson.'
+            )
         # args[1:] to not consider the first part of the file name.
         # the reason this is done it's because the naming is inconsistent
         # e.g., for the 'Communes' theme, the first argument should be 'COMM'
@@ -865,9 +798,21 @@ class Dataset:
                 f"Available to choose from:\n{to_choose_from}"
             )
 
-        content = get_file(
+        content = asyncio.run(get_file(
             self.theme_parser.name, file_format, file_name
-        )
-        with open(Path(out_dir) / file_name, 'wb') as f:
-            content = asyncio.run(content)
-            f.write(content)
+        ))
+        if out_dir is not None:
+            with open(Path(out_dir) / file_name, 'wb') as f:
+                f.write(content)
+            return None
+        else:
+            coro = cast(
+                GeoJSON,
+                asyncio.run(
+                    get_param(self.theme_parser.name, file_format, file_name)
+                )
+            )
+            if GEOPANDAS_AVAILABLE and file_format == 'geojson':
+                return from_geojson(coro)
+            else:
+                return coro
