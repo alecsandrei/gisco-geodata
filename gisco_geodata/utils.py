@@ -6,7 +6,6 @@ from typing import (
     Sequence,
     cast,
     TypeVar,
-    Optional,
     Iterator,
 )
 import asyncio
@@ -82,13 +81,3 @@ async def handle_completed_requests(
         except KeyboardInterrupt:
             break
     return json
-
-
-def construct_param(
-    *args: Optional[str],
-    delimiter: str = '_',
-    suffix: str = ''
-):
-    return ''.join(
-        [delimiter.join(arg for arg in args if arg is not None), suffix]
-    )

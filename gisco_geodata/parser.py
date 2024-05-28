@@ -14,7 +14,7 @@ DATASET_URL = urljoin(URL, '{theme}/datasets.json')
 PARAMS_URL = urljoin(URL, '{theme}/{params}')
 FILE_URL = urljoin(URL, '{theme}/{file_format}/{file}')
 
-HTTPX_KWARGS = {}
+HTTPX_KWARGS: dict[str, Any] = {}
 JSON = dict[str, Any]
 
 
