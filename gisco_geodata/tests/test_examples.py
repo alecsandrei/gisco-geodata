@@ -26,5 +26,4 @@ def test_examples():
             for name, func in inspect.getmembers(examples, inspect.isfunction):
                 # Functions in the example folder should start with 'get'.
                 if name.startswith('get') and func.__module__ == py.stem:
-                    print(func.__module__)
                     func()  # this should not raise errors

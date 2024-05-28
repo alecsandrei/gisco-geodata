@@ -31,3 +31,12 @@ build-backend = "setuptools.build_meta"
 
 [tool.flake8]
 max-line-length = 80
+
+[tool.zest-releaser]
+python-file-with-version = "gisco_geodata/__init__.py"
+tag-format = "v{version}"
+
+[project.optional-dependencies]
+all = ['gisco-geodata[geo,dev]']
+dev = ['pytest', 'matplotlib', 'zest.releaser[recommended]']
+geo = ['geopandas']

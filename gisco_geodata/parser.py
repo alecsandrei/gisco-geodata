@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from urllib.parse import urljoin
 from typing import Any
 from functools import lru_cache

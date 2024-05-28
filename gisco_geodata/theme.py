@@ -8,6 +8,7 @@ from typing import (
     Literal,
     Optional,
     overload,
+    Union,
     cast
 )
 from pathlib import Path
@@ -38,7 +39,7 @@ if GEOPANDAS_AVAILABLE:
     import geopandas as gpd
 
 
-PathLike = Path | str
+PathLike = Union[Path, str]
 JSON = dict[str, Any]
 Projection = Literal['4326', '3035', '3857']
 FileFormat = Literal['csv', 'geojson', 'pbf', 'shp', 'svg', 'topojson']
