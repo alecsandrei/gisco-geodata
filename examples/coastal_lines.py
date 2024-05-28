@@ -1,7 +1,4 @@
-from gisco_geodata.theme import (
-    GEOPANDAS_AVAILABLE,
-    Property
-)
+from gisco_geodata.theme import GEOPANDAS_AVAILABLE
 from gisco_geodata import (
     CoastalLines,
     set_httpx_args,

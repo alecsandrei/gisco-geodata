@@ -1,6 +1,4 @@
-from gisco_geodata.theme import (
-    GEOPANDAS_AVAILABLE,
-)
+from gisco_geodata.theme import GEOPANDAS_AVAILABLE
 from gisco_geodata import (
     Communes,
     set_httpx_args,

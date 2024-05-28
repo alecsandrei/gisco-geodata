@@ -1,4 +1,9 @@
-"""To use this script you will need to also install the 'eurostat' and the 'mapclassify' packages."""
+"""
+To use this script you will need to also install the following packages
+    - eurostat
+    - geopandas
+    - mapclassify
+"""
 
 from gisco_geodata import (
     NUTS,
@@ -12,7 +17,6 @@ from eurostat import (
 import geopandas as gpd
 import matplotlib.pyplot as plt
 
-
 if __name__ == "__main__":
     set_httpx_args(verify=False)
     set_requests_args(verify=False)
@@ -25,7 +29,7 @@ if __name__ == "__main__":
     # Get the dataset information.
     eurostat_database = get_toc_df()
     code = eurostat_database.loc[eurostat_database['title'] == 'Unemployment rate by NUTS 2 regions', 'code'].iloc[0]
-    dataset = get_data_df(code)
+    dataset = get_data_df(code=code)
     assert dataset is not None
 
     # Preprocess the dataset.
@@ -36,6 +40,15 @@ if __name__ == "__main__":
     assert isinstance(dataset, gpd.GeoDataFrame)
 
     # Plot.
-    dataset.plot(column='2023', scheme='NaturalBreaks', legend=True, edgecolor='black',
-                 title='Unemployment rate by NUTS 2 regions, 2023')
+    dataset.plot(
+        column='2023',
+        scheme='NaturalBreaks',
+        legend=True,
+        edgecolor='black',
+    )
+    plt.title(
+        'Unemployment rate by NUTS 2 regions, 2023', fontdict={'size': 15}
+    )
+    plt.xlim(-25, 47)
+    plt.ylim(30, 75)
     plt.show()
