@@ -16,7 +16,7 @@ python3 -m pip install .
 
 # Examples
 
-Also check the examples folder.
+Also check the [examples](https://github.com/alecsandrei/PySAGA-cmd/tree/master/examples) folder.
 
 ```python
 import os
