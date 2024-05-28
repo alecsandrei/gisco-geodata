@@ -1,0 +1,8 @@
+include LICENSE
+include README.md
+
+recursive-exclude examples *
+recursive-exclude gisco_geodata/tests *
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]
+recursive-exclude * *.ipynb

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 import os
 import asyncio
 import datetime
@@ -32,7 +33,7 @@ from .utils import (
     gdf_from_geojson
 )
 
-
+PLATFORM = sys.platform
 SEMAPHORE_VALUE = 50
 GEOPANDAS_AVAILABLE = geopandas_is_available()
 
@@ -43,6 +44,7 @@ if GEOPANDAS_AVAILABLE:
 
 PathLike = Union[Path, str]
 JSON = dict[str, Any]
+
 Projection = Literal['4326', '3035', '3857']
 FileFormat = Literal['csv', 'geojson', 'pbf', 'shp', 'svg', 'topojson']
 Scale = Literal['100K', '01M', '03M', '10M', '20M', '60M']
@@ -50,6 +52,7 @@ SpatialType = Literal['AT', 'BN', 'LB', 'RG']
 CountryBoundary = Literal['INLAND', 'COASTL']
 NUTSLevel = Literal['LEVL_0', 'LEVL_1', 'LEVL_2', 'LEVL_3']
 UrbanAuditCategory = Literal['C', 'F']
+
 Units = dict[str, list[str]]
 Files = dict[str, list[str]]
 Packages = dict[str, dict]
@@ -95,8 +98,8 @@ class MetadataFile:
                 )
             )
             f.write(bytes_)
-        if open_file:
-            os.startfile(out_file)
+        if open_file and PLATFORM == 'win32':
+            os.startfile(out_file)  # type: ignore
 
 
 class PDF(MetadataFile):
@@ -132,8 +135,8 @@ class Documentation:
     ):
         with open(out_file, mode='wb') as f:
             f.write(self.content)
-        if open_file:
-            os.startfile(out_file)
+        if open_file and PLATFORM == 'win32':
+            os.startfile(out_file)  # type: ignore
 
 
 class Property(Enum):
