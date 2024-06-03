@@ -64,12 +64,12 @@ def gdf_from_geojson(
         raise ValueError(f'Wrong argument {geojsons}')
 
 
-T = TypeVar('T')
+_T = TypeVar('_T')
 
 
 async def handle_completed_requests(
-    coros: Iterator[asyncio.futures.Future[T]]
-) -> list[T]:
+    coros: Iterator[asyncio.futures.Future[_T]]
+) -> list[_T]:
     json = []
     for coro in coros:
         try:
