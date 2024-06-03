@@ -1,36 +1,51 @@
 from __future__ import annotations
 
-import sys
-import os
 import asyncio
+from dataclasses import dataclass
 import datetime
+from enum import Enum
+from functools import partial
+import os
+from pathlib import Path
+import sys
 from typing import (
     Any,
-    TypedDict,
     Sequence,
     Literal,
     Optional,
     overload,
-    Union,
     cast
 )
-from pathlib import Path
-from functools import partial
-from enum import Enum
-from dataclasses import dataclass
 
 import httpx
 
+from .utils import (
+    geopandas_is_available,
+    handle_completed_requests,
+    gdf_from_geojson
+)
 from .parser import (
     get_datasets,
     get_file,
     get_param,
     get_themes,
 )
-from .utils import (
-    geopandas_is_available,
-    handle_completed_requests,
-    gdf_from_geojson
+from ._typing import (
+    FilePath,
+    SpatialType,
+    CountryBoundary,
+    Scale,
+    Projection,
+    NUTSLevel,
+    GeoJSON,
+    Units,
+    UrbanAuditCategory,
+    Metadata,
+    FileFormat,
+    JSON,
+    TitleMultilingual,
+    Packages,
+    Files
 )
 
 PLATFORM = sys.platform
@@ -42,41 +57,8 @@ if GEOPANDAS_AVAILABLE:
     import geopandas as gpd
 
 
-PathLike = Union[Path, str]
-JSON = dict[str, Any]
-
-Projection = Literal['4326', '3035', '3857']
-FileFormat = Literal['csv', 'geojson', 'pbf', 'shp', 'svg', 'topojson']
-Scale = Literal['100K', '01M', '03M', '10M', '20M', '60M']
-SpatialType = Literal['AT', 'BN', 'LB', 'RG']
-CountryBoundary = Literal['INLAND', 'COASTL']
-NUTSLevel = Literal['LEVL_0', 'LEVL_1', 'LEVL_2', 'LEVL_3']
-UrbanAuditCategory = Literal['C', 'F']
-
-Units = dict[str, list[str]]
-Files = dict[str, list[str]]
-Packages = dict[str, dict]
-
-UNITS_REGION = '{unit}-region-{scale}-{projection}-{year}.geojson'
-UNITS_LABEL = '{unit}-label-{projection}-{year}.geojson'
-
-
-class GeoJSON(TypedDict):
-    crs: dict
-    type: str
-    features: list[dict]
-
-
-class TitleMultilingual(TypedDict):
-    de: str
-    en: str
-    fr: str
-
-
-class Metadata(TypedDict):
-    pdf: PDF
-    url: str
-    xml: XML
+_UNITS_REGION = '{unit}-region-{scale}-{projection}-{year}.geojson'
+_UNITS_LABEL = '{unit}-label-{projection}-{year}.geojson'
 
 
 @dataclass
@@ -86,7 +68,7 @@ class MetadataFile:
 
     def download(
         self,
-        out_file: PathLike,
+        out_file: FilePath,
         open_file: bool = True
     ):
         with open(out_file, mode='wb') as f:
@@ -130,7 +112,7 @@ class Documentation:
 
     def save(
         self,
-        out_file: PathLike,
+        out_file: FilePath,
         open_file: bool = True
     ):
         with open(out_file, mode='wb') as f:
@@ -227,7 +209,7 @@ class ThemeParser:
         self,
         *,
         file_format: FileFormat,
-        out_dir: PathLike,
+        out_dir: FilePath,
         spatial_type: SpatialType,
         year: Optional[str] = None,
         scale: Optional[Scale] = None,
@@ -242,7 +224,7 @@ class ThemeParser:
         self,
         *,
         file_format: str,
-        out_dir: PathLike,
+        out_dir: FilePath,
         spatial_type: str,
         year: Optional[str] = None,
         scale: Optional[str] = None,
@@ -257,7 +239,7 @@ class ThemeParser:
         self,
         *,
         file_format: FileFormat,
-        out_dir: PathLike,
+        out_dir: FilePath,
         spatial_type: SpatialType,
         year: Optional[str] = None,
         scale: Optional[Scale] = None,
@@ -272,7 +254,7 @@ class ThemeParser:
         self,
         *,
         file_format: str,
-        out_dir: PathLike,
+        out_dir: FilePath,
         spatial_type: str,
         year: Optional[str] = None,
         scale: Optional[str] = None,
@@ -288,7 +270,7 @@ class ThemeParser:
         spatial_type: str,
         file_format: Optional[str] = None,
         year: Optional[str] = None,
-        out_dir: Optional[PathLike] = None,
+        out_dir: Optional[FilePath] = None,
         scale: Optional[str] = None,
         projection: Optional[str] = None,
         country_boundary: Optional[str] = None,
@@ -374,14 +356,14 @@ class Countries(ThemeParser):
         semaphore
     ):
         if spatial_type == 'RG':
-            param = UNITS_REGION.format(
+            param = _UNITS_REGION.format(
                 unit=unit,
                 scale=scale,
                 projection=projection,
                 year=year
             )
         elif spatial_type == 'LB':
-            param = UNITS_LABEL.format(
+            param = _UNITS_LABEL.format(
                 unit=unit,
                 projection=projection,
                 year=year
@@ -521,14 +503,14 @@ class NUTS(ThemeParser):
         semaphore
     ):
         if spatial_type == 'RG':
-            param = UNITS_REGION.format(
+            param = _UNITS_REGION.format(
                 unit=unit,
                 scale=scale,
                 projection=projection,
                 year=year
             )
         elif spatial_type == 'LB':
-            param = UNITS_LABEL.format(
+            param = _UNITS_LABEL.format(
                 unit=unit,
                 projection=projection,
                 year=year
@@ -681,14 +663,14 @@ class UrbanAudit(ThemeParser):
         semaphore
     ):
         if spatial_type == 'RG':
-            param = UNITS_REGION.format(
+            param = _UNITS_REGION.format(
                 unit=unit,
                 scale=scale,
                 projection=projection,
                 year=year
             )
         elif spatial_type == 'LB':
-            param = UNITS_LABEL.format(
+            param = _UNITS_LABEL.format(
                 unit=unit,
                 projection=projection,
                 year=year
@@ -932,7 +914,7 @@ class Dataset:
         self,
         *args: Optional[str],
         file_format: str,
-        out_dir: Optional[PathLike]
+        out_dir: Optional[FilePath]
     ) -> Optional[GeoJSON | gpd.GeoDataFrame]:
         if out_dir is None and file_format != 'geojson':
             raise ValueError(
