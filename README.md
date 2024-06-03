@@ -24,7 +24,7 @@ pip install gisco-geodata
 
 # Examples
 
-Also check the [examples](https://github.com/alecsandrei/PySAGA-cmd/tree/master/examples) folder.
+Also check the [examples](https://github.com/alecsandrei/gisco-geodata/tree/main/examples) folder.
 
 ```python
 import os
