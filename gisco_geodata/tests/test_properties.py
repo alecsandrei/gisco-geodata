@@ -3,7 +3,6 @@ from pathlib import Path
 from gisco_geodata import (
     set_httpx_args,
     Countries,
-    NUTS,
     CoastalLines
 )
 from gisco_geodata.theme import Property

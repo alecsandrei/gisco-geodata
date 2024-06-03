@@ -421,8 +421,8 @@ class Countries(ThemeParser):
         to_do_iter = asyncio.as_completed(to_do)
         try:
             result = await handle_completed_requests(coros=to_do_iter)
-        except httpx.HTTPStatusError as e:
-            e.add_note(
+        except httpx.HTTPStatusError:
+            print(
                 f"No unit was found for parameters:\n"
                 f"countries {', '.join(countries)},\n"
                 f"spatial type {spatial_type},\n"
@@ -569,8 +569,8 @@ class NUTS(ThemeParser):
         to_do_iter = asyncio.as_completed(to_do)
         try:
             results = await handle_completed_requests(coros=to_do_iter)
-        except httpx.HTTPStatusError as e:
-            e.add_note(
+        except httpx.HTTPStatusError:
+            print(
                 f"No unit was found for parameters:\n"
                 f"countries {', '.join(countries)},\n"
                 f"NUTS level {nuts_level}, \n"
@@ -730,8 +730,8 @@ class UrbanAudit(ThemeParser):
         to_do_iter = asyncio.as_completed(to_do)
         try:
             results = await handle_completed_requests(coros=to_do_iter)
-        except httpx.HTTPStatusError as e:
-            e.add_note(
+        except httpx.HTTPStatusError:
+            print(
                 f"No unit was found for parameters:\n"
                 f"countries {', '.join(countries)},\n"
                 f"category {category},\n"
