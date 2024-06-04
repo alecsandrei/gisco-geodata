@@ -7,9 +7,9 @@ import functools
 from typing import (
     TYPE_CHECKING,
     Sequence,
+    Coroutine,
     Callable,
     Any,
-    Awaitable,
     cast,
     Type,
     TypeVar,
@@ -101,8 +101,8 @@ def async_retry(
         delay: The time delay in seconds between each retry.
     """
     def decorator(
-        func: Callable[..., Awaitable[_T]]
-    ) -> Callable[..., Awaitable[_T]]:
+        func: Callable[..., Coroutine[Any, Any, _T]]
+    ) -> Callable[..., Coroutine[Any, Any, _T]]:
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
             attempts = 0

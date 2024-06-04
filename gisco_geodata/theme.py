@@ -17,8 +17,6 @@ from typing import (
     cast
 )
 
-import httpx
-
 from .utils import (
     geopandas_is_available,
     handle_completed_requests,
@@ -394,16 +392,14 @@ class Countries(ThemeParser):
         year
     ):
         semaphore = asyncio.Semaphore(SEMAPHORE_VALUE)
+        units = await self._gather_units(countries)
         to_do = [
             self._get_one(
                 unit, spatial_type, scale, projection, year, semaphore
             )
-            for unit in await self._gather_units(countries)
+            for unit in units
         ]
-        to_do_iter = asyncio.as_completed(to_do)
-        try:
-            result = await handle_completed_requests(coros=to_do_iter)
-        except httpx.HTTPStatusError:
+        if not units:
             print(
                 f"No unit was found for parameters:\n"
                 f"countries {countries},\n"
@@ -412,9 +408,10 @@ class Countries(ThemeParser):
                 f"projection {projection},\n"
                 f"year {year}"
             )
-            raise
-        else:
-            return result
+            raise ValueError
+        to_do_iter = asyncio.as_completed(to_do)
+        result = await handle_completed_requests(coros=to_do_iter)
+        return result
 
     @overload
     def get(
@@ -542,16 +539,14 @@ class NUTS(ThemeParser):
         year
     ):
         semaphore = asyncio.Semaphore(SEMAPHORE_VALUE)
+        units = await self._gather_units(nuts_level, countries)
         to_do = [
             self._get_one(
                 unit, spatial_type, scale, projection, year, semaphore
             )
-            for unit in await self._gather_units(nuts_level, countries)
+            for unit in units
         ]
-        to_do_iter = asyncio.as_completed(to_do)
-        try:
-            results = await handle_completed_requests(coros=to_do_iter)
-        except httpx.HTTPStatusError:
+        if not units:
             print(
                 f"No unit was found for parameters:\n"
                 f"countries {countries},\n"
@@ -561,9 +556,10 @@ class NUTS(ThemeParser):
                 f"projection {projection},\n"
                 f"year {year}"
             )
-            raise
-        else:
-            return results
+            raise ValueError
+        to_do_iter = asyncio.as_completed(to_do)
+        results = await handle_completed_requests(coros=to_do_iter)
+        return results
 
     @overload
     def get(
@@ -945,9 +941,12 @@ class Dataset:
                 f"Available to choose from:\n{to_choose_from}"
             )
 
-        content = asyncio.run(get_file(
-            self.theme_parser.name, file_format, file_name
-        ))
+        content = asyncio.run(
+            get_file(
+                self.theme_parser.name, file_format, file_name
+            )
+        )
+
         if out_dir is not None:
             with open(Path(out_dir) / file_name, 'wb') as f:
                 f.write(content)
