@@ -1,7 +1,9 @@
 0.1.1 (unreleased)
 ------------------
 
-- removed the add_note calls to exceptions because they are only  available in python >= 3.11 as per PEP 678
+- implemented an async retry decorator for async functions and a sync retry decorator for sync functions acf8da3
+
+- removed the add_note calls to exceptions because they are only available in python >= 3.11 as per PEP 678
 
 
 0.1.0 (2024-05-28)
