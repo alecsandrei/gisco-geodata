@@ -1,5 +1,7 @@
 Can be used to download geodata from the [GISCO API](https://gisco-services.ec.europa.eu/distribution/v2/).
 
+[![DOI](https://zenodo.org/badge/789341717.svg)](https://zenodo.org/doi/10.5281/zenodo.11477852)
+
 # Installation
 
 ## Unreleased version
