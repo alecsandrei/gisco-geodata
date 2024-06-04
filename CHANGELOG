@@ -1,4 +1,4 @@
-0.1.1 (2024-06-04)
+0.1.1 (unreleased)
 ------------------
 
 - implemented an async retry decorator for async functions and a sync retry decorator for sync functions acf8da3
