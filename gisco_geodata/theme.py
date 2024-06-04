@@ -30,7 +30,7 @@ from .parser import (
     get_param,
     get_themes,
 )
-from ._typing import (
+from .typing import (
     FilePath,
     SpatialType,
     CountryBoundary,
@@ -406,7 +406,7 @@ class Countries(ThemeParser):
         except httpx.HTTPStatusError:
             print(
                 f"No unit was found for parameters:\n"
-                f"countries {', '.join(countries)},\n"
+                f"countries {countries},\n"
                 f"spatial type {spatial_type},\n"
                 f"scale {scale},\n"
                 f"projection {projection},\n"
@@ -554,7 +554,7 @@ class NUTS(ThemeParser):
         except httpx.HTTPStatusError:
             print(
                 f"No unit was found for parameters:\n"
-                f"countries {', '.join(countries)},\n"
+                f"countries {countries},\n"
                 f"NUTS level {nuts_level}, \n"
                 f"spatial type {spatial_type},\n"
                 f"scale {scale},\n"
@@ -703,28 +703,27 @@ class UrbanAudit(ThemeParser):
         year
     ):
         semaphore = asyncio.Semaphore(SEMAPHORE_VALUE)
-        to_do = [
-            self._get_one(
-                unit, spatial_type, scale, projection, year, semaphore
-            )
-            for unit in await self._gather_units(category, countries)
-        ]
-        to_do_iter = asyncio.as_completed(to_do)
-        try:
-            results = await handle_completed_requests(coros=to_do_iter)
-        except httpx.HTTPStatusError:
+        units = await self._gather_units(category, countries)
+        if not units:
             print(
-                f"No unit was found for parameters:\n"
-                f"countries {', '.join(countries)},\n"
+                f"No units were found for parameters:\n"
+                f"countries {countries},\n"
                 f"category {category},\n"
                 f"spatial type {spatial_type},\n"
                 f"scale {scale},\n"
                 f"projection {projection},\n"
                 f"year {year}"
             )
-            raise
-        else:
-            return results
+            raise ValueError
+        to_do = [
+            self._get_one(
+                unit, spatial_type, scale, projection, year, semaphore
+            )
+            for unit in units
+        ]
+        to_do_iter = asyncio.as_completed(to_do)
+        results = await handle_completed_requests(coros=to_do_iter)
+        return results
 
     @overload
     def get(

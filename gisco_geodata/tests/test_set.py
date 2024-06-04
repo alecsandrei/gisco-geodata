@@ -10,9 +10,9 @@ from gisco_geodata import (
 
 
 def test_semaphore():
-    set_semaphore_value(50)
+    set_semaphore_value(10)
     from gisco_geodata.theme import SEMAPHORE_VALUE
-    assert SEMAPHORE_VALUE == 50
+    assert SEMAPHORE_VALUE == 10
     set_semaphore_value(5)
     from gisco_geodata.theme import SEMAPHORE_VALUE
     assert SEMAPHORE_VALUE == 5

@@ -1,14 +1,20 @@
 from __future__ import annotations
 
-import pkg_resources
+import asyncio
+import importlib.util
+import time
+import functools
 from typing import (
     TYPE_CHECKING,
     Sequence,
+    Callable,
+    Any,
+    Awaitable,
     cast,
+    Type,
     TypeVar,
     Iterator,
 )
-import asyncio
 
 import httpx
 
@@ -19,9 +25,9 @@ if TYPE_CHECKING:
 
 def is_package_installed(name: str) -> bool:
     try:
-        pkg_resources.get_distribution(name)
+        importlib.util.find_spec(name)
         return True
-    except pkg_resources.DistributionNotFound:
+    except ImportError:
         return False
 
 
@@ -81,3 +87,62 @@ async def handle_completed_requests(
         except KeyboardInterrupt:
             break
     return json
+
+
+def async_retry(
+    on: Type[Exception] = Exception,
+    retries: int = 50,
+    delay: float = 0.5
+):
+    """Wraps async functions into try/except blocks.
+
+    Args:
+        retries: The number of retries.
+        delay: The time delay in seconds between each retry.
+    """
+    def decorator(
+        func: Callable[..., Awaitable[_T]]
+    ) -> Callable[..., Awaitable[_T]]:
+        @functools.wraps(func)
+        async def wrapper(*args, **kwargs):
+            attempts = 0
+            while attempts < retries:
+                try:
+                    return await func(*args, **kwargs)
+                except on:
+                    await asyncio.sleep(delay)
+                    attempts += 1
+            raise RuntimeError(
+                f"Function {func.__name__} failed after {retries} retries."
+            )
+        return wrapper
+    return decorator
+
+
+def retry(
+    on: Type[Exception] = Exception,
+    retries: int = 50,
+    delay: float = 0.5
+):
+    """Wraps functions into try/except blocks.
+
+    Args:
+        on: The Exception type that should be raised to retry.
+        retries: The number of retries.
+        delay: The time delay in seconds between each retry.
+    """
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            attempts = 0
+            while attempts < retries:
+                try:
+                    return func(*args, **kwargs)
+                except on:
+                    time.sleep(delay)
+                    attempts += 1
+            raise RuntimeError(
+                f"Function {func.__name__} failed after {retries} retries."
+            )
+        return wrapper
+    return decorator
