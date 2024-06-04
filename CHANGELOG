@@ -1,7 +1,7 @@
 0.1.1 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- removed the add_note calls to exceptions because they are only  available in python >= 3.11 as per PEP 678
 
 
 0.1.0 (2024-05-28)
