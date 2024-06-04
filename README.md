@@ -10,7 +10,7 @@ cd gisco-geodata
 python3 -m pip install .
 ```
 
-## PyPI
+## [PyPI](https://pypi.org/project/gisco-geodata/)
 
 ```sh
 pip install gisco-geodata
