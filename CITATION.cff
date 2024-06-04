@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Cuvuliuc"
+  given-names: "Alex-Andrei"
+  orcid: "https://orcid.org/0009-0004-7575-2036"
+title: "gisco-geodata"
+version: 0.1.1
+date-released: 2024-06-04
+url: "https://github.com/alecsandrei/gisco-geodata"
