@@ -8,6 +8,7 @@ from gisco_geodata import (
     set_httpx_args
 )
 from gisco_geodata import theme
+from gisco_geodata.utils import run_async
 
 set_httpx_args(verify=False)
 COUNTRIES = Countries()
@@ -16,7 +17,7 @@ NUTS_ = NUTS()
 
 def test_get_countries():
     setattr(theme, 'GEOPANDAS_AVAILABLE', False)
-    units = asyncio.run(COUNTRIES.get_units())
+    units = run_async(COUNTRIES.get_units())
     assert isinstance(units, dict)
     assert isinstance(units['RO'], list)
     geojson = COUNTRIES.get(countries=['RO', 'IT'], spatial_type='RG')

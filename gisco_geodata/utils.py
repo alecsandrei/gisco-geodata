@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import importlib.util
+import threading
 import time
 import functools
 from typing import (
@@ -146,3 +147,40 @@ def retry(
             )
         return wrapper
     return decorator
+
+
+class RunThread(threading.Thread):
+    def __init__(self, coro):
+        self.coro = coro
+        self.result = None
+        super().__init__()
+
+    def run(self):
+        self.result = asyncio.run(self.coro)
+
+
+def run_async(coro: Coroutine[Any, Any, _T]) -> _T:
+    """Function to use instead of asyncio.run.
+
+    This prevents problems when there is already
+      asynchronous code running.
+      See: https://stackoverflow.com/a/75094151
+
+    Args:
+        coro (Coroutine[Any, Any, _T]):
+            A coroutine object.
+
+    Returns:
+        _T: The returned result from the coroutine execution.
+    """
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+    if loop and loop.is_running():
+        thread = RunThread(coro)
+        thread.start()
+        thread.join()
+        return thread.result
+    else:
+        return asyncio.run(coro)

@@ -20,7 +20,8 @@ from typing import (
 from .utils import (
     geopandas_is_available,
     handle_completed_requests,
-    gdf_from_geojson
+    gdf_from_geojson,
+    run_async
 )
 from .parser import (
     get_datasets,
@@ -70,7 +71,7 @@ class MetadataFile:
         open_file: bool = True
     ):
         with open(out_file, mode='wb') as f:
-            bytes_ = asyncio.run(
+            bytes_ = run_async(
                 get_param(
                     self.dataset.theme_parser.name,
                     self.file_name,
@@ -97,7 +98,7 @@ class Documentation:
 
     @property
     def content(self) -> bytes:
-        return asyncio.run(
+        return run_async(
             get_param(
                 self.dataset.theme_parser.name,
                 self.file_name,
@@ -456,7 +457,7 @@ class Countries(ThemeParser):
             projection,
             year
         )
-        geojson = asyncio.run(coro)
+        geojson = run_async(coro)
         if GEOPANDAS_AVAILABLE:
             return gdf_from_geojson(geojson)
         return geojson
@@ -608,7 +609,7 @@ class NUTS(ThemeParser):
             projection,
             year
         )
-        geojson = asyncio.run(coro)
+        geojson = run_async(coro)
         if GEOPANDAS_AVAILABLE:
             return gdf_from_geojson(geojson)
         return geojson
@@ -768,7 +769,7 @@ class UrbanAudit(ThemeParser):
             projection,
             year
         )
-        geojson = asyncio.run(coro)
+        geojson = run_async(coro)
         if GEOPANDAS_AVAILABLE:
             return gdf_from_geojson(geojson)
         return geojson
@@ -823,11 +824,11 @@ class Dataset:
 
     @property
     def units(self) -> Optional[Units]:
-        return asyncio.run(self.get_units())
+        return run_async(self.get_units())
 
     @property
     def files(self) -> Files:
-        return asyncio.run(self.get_files())
+        return run_async(self.get_files())
 
     @property
     def packages(self) -> Optional[Packages]:
@@ -851,7 +852,7 @@ class Dataset:
         )
         if packages is None:
             return None
-        return asyncio.run(
+        return run_async(
             get_param(self.theme_parser.name, packages)
         )
 
@@ -941,7 +942,7 @@ class Dataset:
                 f"Available to choose from:\n{to_choose_from}"
             )
 
-        content = asyncio.run(
+        content = run_async(
             get_file(
                 self.theme_parser.name, file_format, file_name
             )
@@ -954,7 +955,7 @@ class Dataset:
         else:
             coro = cast(
                 GeoJSON,
-                asyncio.run(
+                run_async(
                     get_param(self.theme_parser.name, file_format, file_name)
                 )
             )
