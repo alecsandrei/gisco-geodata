@@ -132,12 +132,6 @@ class Property(Enum):
     UNITS = 'units'
 
 
-class Language(Enum):
-    GERMAN = 'de'
-    ENGLISH = 'en'
-    FRENCH = 'fr'
-
-
 class Theme(Enum):
     COASTAL_LINES = 'coas'
     COMMUNES = 'communes'
