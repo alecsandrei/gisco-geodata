@@ -1,6 +1,8 @@
 0.1.2 (unreleased)
 ------------------
 
+- XML metadata can be read directly as an xml.etree.ElementTree object
+
 - Added an asyncio.run wrapper. See https://stackoverflow.com/questions/55409641/asyncio-run-cannot-be-called-from-a-running-event-loop-when-using-jupyter-no. gisco-geodata would raise errors if there was already an event loop running (e.g. when using gisco-geodata with jupyter notebook)
 
 

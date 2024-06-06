@@ -16,6 +16,7 @@ from typing import (
     overload,
     cast
 )
+import xml.etree.ElementTree as ET
 
 from .utils import (
     geopandas_is_available,
@@ -83,12 +84,23 @@ class MetadataFile:
             os.startfile(out_file)  # type: ignore
 
 
+@dataclass
 class PDF(MetadataFile):
     ...
 
 
+@dataclass
 class XML(MetadataFile):
-    ...
+
+    def tree(self):
+        bytes_ = run_async(
+            get_param(
+                self.dataset.theme_parser.name,
+                self.file_name,
+                return_type='bytes'
+            )
+        )
+        return ET.fromstring(bytes_)
 
 
 @dataclass
@@ -860,12 +872,12 @@ class Dataset:
         if metadata_props is None:
             return None
         if not isinstance(metadata_props['pdf'], MetadataFile):
-            metadata_props['pdf'] = MetadataFile(
+            metadata_props['pdf'] = PDF(
                 metadata_props['pdf'],
                 dataset=self
             )
         if not isinstance(metadata_props['xml'], MetadataFile):
-            metadata_props['xml'] = MetadataFile(
+            metadata_props['xml'] = XML(
                 metadata_props['xml'],
                 dataset=self
             )
