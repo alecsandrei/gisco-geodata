@@ -1,20 +1,22 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import (
+    Coroutine,
+    Sequence,
+    Callable,
+    Iterator,
+)
 import importlib.util
 import threading
 import time
 import functools
 from typing import (
     TYPE_CHECKING,
-    Sequence,
-    Coroutine,
-    Callable,
     Any,
     cast,
     Type,
     TypeVar,
-    Iterator,
 )
 
 import httpx
@@ -150,7 +152,7 @@ def retry(
 
 
 class RunThread(threading.Thread):
-    def __init__(self, coro):
+    def __init__(self, coro: Coroutine[Any, Any, _T]):
         self.coro = coro
         self.result = None
         super().__init__()
