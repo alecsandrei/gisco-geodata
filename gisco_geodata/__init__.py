@@ -9,7 +9,7 @@ from .theme import (
     Countries,
 )
 
-__version__ = '0.1.2'
+__version__ = '0.1.3.dev0'
 
 
 def set_semaphore_value(value: int):
