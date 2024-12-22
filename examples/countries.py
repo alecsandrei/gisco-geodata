@@ -15,6 +15,7 @@ def get_countries_subset():
         spatial_type='LB',
         countries=['IT', 'RO'],
         projection='4326',
+        year='2020'
     )
 
 
@@ -24,7 +25,8 @@ def get_countries_polygons_1():
     return countries.get(
         spatial_type='RG',
         projection='4326',
-        scale='20M'
+        scale='20M',
+        year='2020'
     )
 
 
@@ -34,6 +36,7 @@ def get_countries_points():
     return countries.get(
         spatial_type='LB',
         projection='4326',
+        year='2020'
     )
 
 
@@ -41,6 +44,7 @@ def get_countries_polygons_2():
     countries = Countries()
     return countries.get(
         spatial_type='RG',
+        year='2020'
     )
 
 
