@@ -1,4 +1,4 @@
-0.1.2 (unreleased)
+0.1.2 (2024-12-22)
 ------------------
 
 - bugfix: parameter year was not passed to self.get_units() for all themes
