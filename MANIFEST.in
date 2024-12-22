@@ -1,6 +1,7 @@
 include LICENSE
 include README.md
 include CHANGELOG
+include *.cff
 
 recursive-exclude examples *
 recursive-exclude gisco_geodata/tests *
