@@ -39,5 +39,5 @@ tag-format = "v{version}"
 
 [project.optional-dependencies]
 all = ['gisco-geodata[geo,dev]']
-dev = ['pytest', 'matplotlib', 'zest.releaser[recommended]', 'eurostat']
+dev = ['pytest', 'matplotlib', 'zest.releaser[recommended]', 'eurostat', 'geopandas']
 geo = ['geopandas']
