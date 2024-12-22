@@ -343,13 +343,14 @@ class Countries(ThemeParser):
     async def _gather_units(
         self,
         countries: Optional[Sequence[str]] = None,
+        year: Optional[str] = None
     ):
         def filter_logic(k: str):
             if countries is not None:
                 return k in countries
             return True
 
-        return filter(filter_logic, await self.get_units())
+        return filter(filter_logic, await self.get_units(year))
 
     async def _get_one(
         self,
@@ -399,7 +400,7 @@ class Countries(ThemeParser):
         year
     ):
         semaphore = asyncio.Semaphore(SEMAPHORE_VALUE)
-        units = await self._gather_units(countries)
+        units = await self._gather_units(countries, year)
         to_do = [
             self._get_one(
                 unit, spatial_type, scale, projection, year, semaphore
@@ -486,6 +487,7 @@ class NUTS(ThemeParser):
         self,
         nuts_level: NUTSLevel,
         countries: Optional[Sequence[str]] = None,
+        year: Optional[str] = None
     ):
         def filter_logic(k: str):
             conditions = []
@@ -495,7 +497,7 @@ class NUTS(ThemeParser):
                 len(k)-2 == int(nuts_level[-1])
             )
             return all(conditions)
-        return filter(filter_logic, await self.get_units())
+        return filter(filter_logic, await self.get_units(year))
 
     async def _get_one(
         self,
@@ -546,7 +548,7 @@ class NUTS(ThemeParser):
         year
     ):
         semaphore = asyncio.Semaphore(SEMAPHORE_VALUE)
-        units = await self._gather_units(nuts_level, countries)
+        units = await self._gather_units(nuts_level, countries, year)
         to_do = [
             self._get_one(
                 unit, spatial_type, scale, projection, year, semaphore
