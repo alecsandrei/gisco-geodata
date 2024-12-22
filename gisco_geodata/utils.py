@@ -185,6 +185,6 @@ def run_async(coro: Coroutine[Any, Any, T]) -> T:
         thread = RunThread(coro)
         thread.start()
         thread.join()
-        return thread.result
+        return cast(T, thread.result)
     else:
         return asyncio.run(coro)
