@@ -25,6 +25,8 @@ if TYPE_CHECKING:
     from gisco_geodata.theme import GeoJSON
     import geopandas as gpd
 
+T = TypeVar('T')
+
 
 def is_package_installed(name: str) -> bool:
     try:
@@ -74,12 +76,9 @@ def gdf_from_geojson(geojsons: GeoJSON | Sequence[GeoJSON]) -> gpd.GeoDataFrame:
         raise ValueError(f'Wrong argument {geojsons}')
 
 
-_T = TypeVar('_T')
-
-
 async def handle_completed_requests(
-    coros: Iterator[asyncio.futures.Future[_T]],
-) -> list[_T]:
+    coros: Iterator[asyncio.futures.Future[T]],
+) -> list[T]:
     json = []
     for coro in coros:
         try:
@@ -104,8 +103,8 @@ def async_retry(
     """
 
     def decorator(
-        func: Callable[..., Coroutine[Any, Any, _T]],
-    ) -> Callable[..., Coroutine[Any, Any, _T]]:
+        func: Callable[..., Coroutine[Any, Any, T]],
+    ) -> Callable[..., Coroutine[Any, Any, T]]:
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
             attempts = 0
@@ -155,7 +154,7 @@ def retry(
 
 
 class RunThread(threading.Thread):
-    def __init__(self, coro: Coroutine[Any, Any, _T]):
+    def __init__(self, coro: Coroutine[Any, Any, T]):
         self.coro = coro
         self.result = None
         super().__init__()
@@ -164,7 +163,7 @@ class RunThread(threading.Thread):
         self.result = asyncio.run(self.coro)
 
 
-def run_async(coro: Coroutine[Any, Any, _T]) -> _T:
+def run_async(coro: Coroutine[Any, Any, T]) -> T:
     """Function to use instead of asyncio.run.
 
     This prevents problems when there is already
