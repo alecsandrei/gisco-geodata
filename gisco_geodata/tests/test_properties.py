@@ -1,10 +1,6 @@
 from pathlib import Path
 
-from gisco_geodata import (
-    set_httpx_args,
-    Countries,
-    CoastalLines
-)
+from gisco_geodata import set_httpx_args, Countries, CoastalLines
 from gisco_geodata.theme import Property
 
 set_httpx_args(verify=False)
@@ -16,14 +12,8 @@ def test_metadata(tmpdir: Path):
     pdf = tmpdir / 'pdf_file.pdf'
     xml = tmpdir / 'xml_file.xml'
     assert dataset.metadata is not None
-    dataset.metadata['pdf'].download(
-        out_file=pdf,
-        open_file=False
-    )
-    dataset.metadata['xml'].download(
-        out_file=xml,
-        open_file=False
-    )
+    dataset.metadata['pdf'].download(out_file=pdf, open_file=False)
+    dataset.metadata['xml'].download(out_file=xml, open_file=False)
     assert pdf.exists()
     assert xml.exists()
 

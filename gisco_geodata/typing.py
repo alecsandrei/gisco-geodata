@@ -1,19 +1,10 @@
 from __future__ import annotations
 
 from os import PathLike
-from typing import (
-    Literal,
-    TypedDict,
-    TYPE_CHECKING,
-    Any,
-    Union
-)
+from typing import Literal, TypedDict, TYPE_CHECKING, Any, Union
 
 if TYPE_CHECKING:
-    from .theme import (
-        PDF,
-        XML
-    )
+    from .theme import PDF, XML
 
 # TODO: find a way to have this type alias without 'Union'
 # and have it backwards compatible with python >= 3.9

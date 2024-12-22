@@ -1,16 +1,14 @@
 [project]
 name = "gisco-geodata"
 version = "0.1.2.dev0"
-dependencies=["httpx", "async-cache"]
+dependencies = ["httpx", "async-cache"]
 description = "GISCO Geodata is a Python package that provides access to the European Commission's GISCO geospatial data."
 readme = "README.md"
 requires-python = ">=3.9"
-keywords = [
-    "gisco-geodata",
-]
-license = {text = "MIT"}
+keywords = ["gisco-geodata"]
+license = { text = "MIT" }
 authors = [
-  {name = "Alex-Andrei Cuvuliuc", email = "cuvuliucalexandrei@gmail.com"},
+    { name = "Alex-Andrei Cuvuliuc", email = "cuvuliucalexandrei@gmail.com" },
 ]
 classifiers = [
     "Intended Audience :: Developers",
@@ -38,6 +36,60 @@ python-file-with-version = "gisco_geodata/__init__.py"
 tag-format = "v{version}"
 
 [project.optional-dependencies]
-all = ['gisco-geodata[geo,dev]']
-dev = ['pytest', 'matplotlib', 'zest.releaser[recommended]', 'eurostat', 'geopandas']
-geo = ['geopandas']
+all = ["gisco-geodata[geo,dev]"]
+dev = [
+    "pytest",
+    "matplotlib",
+    "zest.releaser[recommended]",
+    "eurostat",
+    "geopandas",
+    "ruff",
+    "mypy",
+]
+geo = ["geopandas"]
+
+[tool.ruff]
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pyenv",
+    ".pytest_cache",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    ".vscode",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "site-packages",
+    "venv",
+]
+line-length = 80
+indent-width = 4
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
+ignore = []
+fixable = ["ALL"]
+unfixable = []
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"

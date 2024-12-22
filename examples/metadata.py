@@ -4,10 +4,7 @@ import tempfile
 from pathlib import Path
 from xml.etree.ElementTree import Element
 
-from gisco_geodata import (
-    UrbanAudit,
-    set_httpx_args
-)
+from gisco_geodata import UrbanAudit, set_httpx_args
 
 if __name__ == '__main__':
     set_httpx_args(verify=False)
@@ -24,7 +21,7 @@ if __name__ == '__main__':
         pdf_out = Path(tempdir) / 'urban_audit_metadata.pdf'
         pdf.download(
             pdf_out,
-            open_file=False  # if you are on Windows, this will open the file
+            open_file=False,  # if you are on Windows, this will open the file
         )
 
         # Minimal XML parsing examples (two).
@@ -42,13 +39,13 @@ if __name__ == '__main__':
                     print(text)
                 if len(child):
                     parse_all(child)
+
         parse_all(tree)
 
         # Example two
-        namespace = tree.tag[:tree.tag.find('}')+1]
+        namespace = tree.tag[: tree.tag.find('}') + 1]
         statement = (
-            tree
-            .find(f'{namespace}dataQualityInfo')
+            tree.find(f'{namespace}dataQualityInfo')
             .find(f'{namespace}DQ_DataQuality')
             .find(f'{namespace}lineage')
             .find(f'{namespace}LI_Lineage')

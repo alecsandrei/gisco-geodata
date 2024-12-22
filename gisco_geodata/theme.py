@@ -9,20 +9,14 @@ from functools import partial
 import os
 from pathlib import Path
 import sys
-from typing import (
-    Any,
-    Literal,
-    Optional,
-    overload,
-    cast
-)
+from typing import Any, Literal, Optional, overload, cast
 import xml.etree.ElementTree as ET
 
 from .utils import (
     geopandas_is_available,
     handle_completed_requests,
     gdf_from_geojson,
-    run_async
+    run_async,
 )
 from .parser import (
     get_datasets,
@@ -45,7 +39,7 @@ from .typing import (
     JSON,
     TitleMultilingual,
     Packages,
-    Files
+    Files,
 )
 
 PLATFORM = sys.platform
@@ -66,17 +60,13 @@ class MetadataFile:
     file_name: str
     dataset: Dataset
 
-    def download(
-        self,
-        out_file: FilePath,
-        open_file: bool = True
-    ):
+    def download(self, out_file: FilePath, open_file: bool = True):
         with open(out_file, mode='wb') as f:
             bytes_ = run_async(
                 get_param(
                     self.dataset.theme_parser.name,
                     self.file_name,
-                    return_type='bytes'
+                    return_type='bytes',
                 )
             )
             f.write(bytes_)
@@ -85,19 +75,17 @@ class MetadataFile:
 
 
 @dataclass
-class PDF(MetadataFile):
-    ...
+class PDF(MetadataFile): ...
 
 
 @dataclass
 class XML(MetadataFile):
-
     def tree(self):
         bytes_ = run_async(
             get_param(
                 self.dataset.theme_parser.name,
                 self.file_name,
-                return_type='bytes'
+                return_type='bytes',
             )
         )
         return ET.fromstring(bytes_)
@@ -114,18 +102,14 @@ class Documentation:
             get_param(
                 self.dataset.theme_parser.name,
                 self.file_name,
-                return_type='bytes'
+                return_type='bytes',
             )
         )
 
     def text(self, encoding: str = 'utf-8') -> str:
         return self.content.decode(encoding=encoding)
 
-    def save(
-        self,
-        out_file: FilePath,
-        open_file: bool = True
-    ):
+    def save(self, out_file: FilePath, open_file: bool = True):
         with open(out_file, mode='wb') as f:
             f.write(self.content)
         if open_file and PLATFORM == 'win32':
@@ -163,15 +147,11 @@ class ThemeParser:
 
     @property
     def title_multilingual(self) -> Optional[TitleMultilingual]:
-        return self.properties.get(
-            Property.TITLE_MULTILINGUAL.value, None
-        )
+        return self.properties.get(Property.TITLE_MULTILINGUAL.value, None)
 
     @property
     def title(self) -> Optional[str]:
-        return self.properties.get(
-            Property.TITLE.value, None
-        )
+        return self.properties.get(Property.TITLE.value, None)
 
     @property
     def datasets(self) -> JSON:
@@ -182,10 +162,9 @@ class ThemeParser:
         return self.get_datasets()[-1]
 
     def get_datasets(self) -> list[Dataset]:
-        return (
-            [Dataset(self, year.split('-')[-1])
-             for year in self.datasets.keys()]
-        )
+        return [
+            Dataset(self, year.split('-')[-1]) for year in self.datasets.keys()
+        ]
 
     def get_property(self, property: str) -> Any:
         return self.properties[property]
@@ -205,9 +184,8 @@ class ThemeParser:
         projection: Optional[str] = None,
         country_boundary: Optional[str] = None,
         nuts_level: Optional[str] = None,
-        **kwargs: str
-    ) -> GeoJSON | gpd.GeoDataFrame:
-        ...
+        **kwargs: str,
+    ) -> GeoJSON | gpd.GeoDataFrame: ...
 
     @overload
     def download(
@@ -220,9 +198,8 @@ class ThemeParser:
         scale: Optional[Scale] = None,
         projection: Optional[Projection] = None,
         country_boundary: Optional[CountryBoundary] = None,
-        **kwargs: str
-    ) -> None:
-        ...
+        **kwargs: str,
+    ) -> None: ...
 
     @overload
     def download(
@@ -235,9 +212,8 @@ class ThemeParser:
         scale: Optional[str] = None,
         projection: Optional[str] = None,
         country_boundary: Optional[CountryBoundary] = None,
-        **kwargs: str
-    ) -> None:
-        ...
+        **kwargs: str,
+    ) -> None: ...
 
     @overload
     def download(
@@ -250,9 +226,8 @@ class ThemeParser:
         scale: Optional[Scale] = None,
         projection: Optional[Projection] = None,
         nuts_level: Optional[NUTSLevel] = None,
-        **kwargs: str
-    ) -> None:
-        ...
+        **kwargs: str,
+    ) -> None: ...
 
     @overload
     def download(
@@ -265,9 +240,8 @@ class ThemeParser:
         scale: Optional[str] = None,
         projection: Optional[str] = None,
         nuts_level: Optional[str] = None,
-        **kwargs: str
-    ) -> None:
-        ...
+        **kwargs: str,
+    ) -> None: ...
 
     def download(
         self,
@@ -280,7 +254,7 @@ class ThemeParser:
         projection: Optional[str] = None,
         country_boundary: Optional[str] = None,
         nuts_level: Optional[str] = None,
-        **kwargs: str
+        **kwargs: str,
     ) -> Optional[GeoJSON | gpd.GeoDataFrame]:
         if year is None:
             year = self.default_dataset.year
@@ -296,7 +270,7 @@ class ThemeParser:
             nuts_level,
             **kwargs,
             file_format=file_format,
-            out_dir=out_dir
+            out_dir=out_dir,
         )
 
 
@@ -343,7 +317,7 @@ class Countries(ThemeParser):
     async def _gather_units(
         self,
         countries: Optional[Sequence[str]] = None,
-        year: Optional[str] = None
+        year: Optional[str] = None,
     ):
         def filter_logic(k: str):
             if countries is not None:
@@ -353,52 +327,30 @@ class Countries(ThemeParser):
         return filter(filter_logic, await self.get_units(year))
 
     async def _get_one(
-        self,
-        unit,
-        spatial_type,
-        scale,
-        projection,
-        year,
-        semaphore
+        self, unit, spatial_type, scale, projection, year, semaphore
     ):
         if spatial_type == 'RG':
             param = _UNITS_REGION.format(
-                unit=unit,
-                scale=scale,
-                projection=projection,
-                year=year
+                unit=unit, scale=scale, projection=projection, year=year
             )
         elif spatial_type == 'LB':
             param = _UNITS_LABEL.format(
-                unit=unit,
-                projection=projection,
-                year=year
+                unit=unit, projection=projection, year=year
             )
         else:
             raise ValueError(
-                f'Wrong parameter {spatial_type}.'
-                'Allowed are "RG" and "LB".'
+                f'Wrong parameter {spatial_type}.' 'Allowed are "RG" and "LB".'
             )
         try:
             async with semaphore:
                 geojson = cast(
-                    GeoJSON,
-                    await get_param(
-                        self.name, 'distribution', param
-                    )
+                    GeoJSON, await get_param(self.name, 'distribution', param)
                 )
         except Exception:
             raise
         return geojson
 
-    async def _get_many(
-        self,
-        countries,
-        spatial_type,
-        scale,
-        projection,
-        year
-    ):
+    async def _get_many(self, countries, spatial_type, scale, projection, year):
         semaphore = asyncio.Semaphore(SEMAPHORE_VALUE)
         units = await self._gather_units(countries, year)
         to_do = [
@@ -409,12 +361,12 @@ class Countries(ThemeParser):
         ]
         if not units:
             print(
-                f"No unit was found for parameters:\n"
-                f"countries {countries},\n"
-                f"spatial type {spatial_type},\n"
-                f"scale {scale},\n"
-                f"projection {projection},\n"
-                f"year {year}"
+                f'No unit was found for parameters:\n'
+                f'countries {countries},\n'
+                f'spatial type {spatial_type},\n'
+                f'scale {scale},\n'
+                f'projection {projection},\n'
+                f'year {year}'
             )
             raise ValueError
         to_do_iter = asyncio.as_completed(to_do)
@@ -429,8 +381,7 @@ class Countries(ThemeParser):
         spatial_type: Literal['LB'],
         projection: Projection = '4326',
         year: Optional[str] = None,
-    ) -> list[GeoJSON] | gpd.GeoDataFrame:
-        ...
+    ) -> list[GeoJSON] | gpd.GeoDataFrame: ...
 
     @overload
     def get(
@@ -441,8 +392,7 @@ class Countries(ThemeParser):
         scale: Scale = '20M',
         projection: Projection = '4326',
         year: Optional[str] = None,
-    ) -> list[GeoJSON] | gpd.GeoDataFrame:
-        ...
+    ) -> list[GeoJSON] | gpd.GeoDataFrame: ...
 
     def get(
         self,
@@ -457,13 +407,7 @@ class Countries(ThemeParser):
             countries = [countries]
         if year is None:
             year = self.default_dataset.year
-        coro = self._get_many(
-            countries,
-            spatial_type,
-            scale,
-            projection,
-            year
-        )
+        coro = self._get_many(countries, spatial_type, scale, projection, year)
         geojson = run_async(coro)
         if GEOPANDAS_AVAILABLE:
             return gdf_from_geojson(geojson)
@@ -487,65 +431,43 @@ class NUTS(ThemeParser):
         self,
         nuts_level: NUTSLevel,
         countries: Optional[Sequence[str]] = None,
-        year: Optional[str] = None
+        year: Optional[str] = None,
     ):
         def filter_logic(k: str):
             conditions = []
             if countries is not None:
                 conditions.append(k in countries)
-            conditions.append(
-                len(k)-2 == int(nuts_level[-1])
-            )
+            conditions.append(len(k) - 2 == int(nuts_level[-1]))
             return all(conditions)
+
         return filter(filter_logic, await self.get_units(year))
 
     async def _get_one(
-        self,
-        unit,
-        spatial_type,
-        scale,
-        projection,
-        year,
-        semaphore
+        self, unit, spatial_type, scale, projection, year, semaphore
     ):
         if spatial_type == 'RG':
             param = _UNITS_REGION.format(
-                unit=unit,
-                scale=scale,
-                projection=projection,
-                year=year
+                unit=unit, scale=scale, projection=projection, year=year
             )
         elif spatial_type == 'LB':
             param = _UNITS_LABEL.format(
-                unit=unit,
-                projection=projection,
-                year=year
+                unit=unit, projection=projection, year=year
             )
         else:
             raise ValueError(
-                f'Wrong parameter {spatial_type}.'
-                'Allowed are "RG" and "LB".'
+                f'Wrong parameter {spatial_type}.' 'Allowed are "RG" and "LB".'
             )
         try:
             async with semaphore:
                 geojson = cast(
-                    GeoJSON,
-                    await get_param(
-                        self.name, 'distribution', param
-                    )
+                    GeoJSON, await get_param(self.name, 'distribution', param)
                 )
         except Exception:
             raise
         return geojson
 
     async def _get_many(
-        self,
-        nuts_level,
-        countries,
-        spatial_type,
-        scale,
-        projection,
-        year
+        self, nuts_level, countries, spatial_type, scale, projection, year
     ):
         semaphore = asyncio.Semaphore(SEMAPHORE_VALUE)
         units = await self._gather_units(nuts_level, countries, year)
@@ -557,13 +479,13 @@ class NUTS(ThemeParser):
         ]
         if not units:
             print(
-                f"No unit was found for parameters:\n"
-                f"countries {countries},\n"
-                f"NUTS level {nuts_level}, \n"
-                f"spatial type {spatial_type},\n"
-                f"scale {scale},\n"
-                f"projection {projection},\n"
-                f"year {year}"
+                f'No unit was found for parameters:\n'
+                f'countries {countries},\n'
+                f'NUTS level {nuts_level}, \n'
+                f'spatial type {spatial_type},\n'
+                f'scale {scale},\n'
+                f'projection {projection},\n'
+                f'year {year}'
             )
             raise ValueError
         to_do_iter = asyncio.as_completed(to_do)
@@ -579,8 +501,7 @@ class NUTS(ThemeParser):
         spatial_type: Literal['LB'] = 'LB',
         projection: Projection = '4326',
         year: Optional[str] = None,
-    ) -> list[GeoJSON] | gpd.GeoDataFrame:
-        ...
+    ) -> list[GeoJSON] | gpd.GeoDataFrame: ...
 
     @overload
     def get(
@@ -592,8 +513,7 @@ class NUTS(ThemeParser):
         scale: Scale = '20M',
         projection: Projection = '4326',
         year: Optional[str] = None,
-    ) -> list[GeoJSON] | gpd.GeoDataFrame:
-        ...
+    ) -> list[GeoJSON] | gpd.GeoDataFrame: ...
 
     def get(
         self,
@@ -603,19 +523,14 @@ class NUTS(ThemeParser):
         spatial_type: str = 'RG',
         projection: str = '4326',
         scale: Optional[str] = '20M',
-        year: Optional[str] = None
+        year: Optional[str] = None,
     ) -> list[GeoJSON] | gpd.GeoDataFrame:
         if isinstance(countries, str):
             countries = [countries]
         if year is None:
             year = self.default_dataset.year
         coro = self._get_many(
-            nuts_level,
-            countries,
-            spatial_type,
-            scale,
-            projection,
-            year
+            nuts_level, countries, spatial_type, scale, projection, year
         )
         geojson = run_async(coro)
         if GEOPANDAS_AVAILABLE:
@@ -653,45 +568,31 @@ class UrbanAudit(ThemeParser):
             if category is not None:
                 conditions.append(k.endswith(category))
             return all(conditions)
+
         units = await self.get_units()
         if category is None and countries is None:
             return units
         return filter(filter_logic, units)
 
     async def _get_one(
-        self,
-        unit,
-        spatial_type,
-        scale,
-        projection,
-        year,
-        semaphore
+        self, unit, spatial_type, scale, projection, year, semaphore
     ):
         if spatial_type == 'RG':
             param = _UNITS_REGION.format(
-                unit=unit,
-                scale=scale,
-                projection=projection,
-                year=year
+                unit=unit, scale=scale, projection=projection, year=year
             )
         elif spatial_type == 'LB':
             param = _UNITS_LABEL.format(
-                unit=unit,
-                projection=projection,
-                year=year
+                unit=unit, projection=projection, year=year
             )
         else:
             raise ValueError(
-                f'Wrong parameter {spatial_type}.'
-                'Allowed are "RG" and "LB".'
+                f'Wrong parameter {spatial_type}.' 'Allowed are "RG" and "LB".'
             )
         try:
             async with semaphore:
                 geojson = cast(
-                    GeoJSON,
-                    await get_param(
-                        self.name, 'distribution', param
-                    )
+                    GeoJSON, await get_param(self.name, 'distribution', param)
                 )
         except Exception:
             raise
@@ -699,25 +600,19 @@ class UrbanAudit(ThemeParser):
             return geojson
 
     async def _get_many(
-        self,
-        countries,
-        category,
-        spatial_type,
-        scale,
-        projection,
-        year
+        self, countries, category, spatial_type, scale, projection, year
     ):
         semaphore = asyncio.Semaphore(SEMAPHORE_VALUE)
         units = await self._gather_units(category, countries)
         if not units:
             print(
-                f"No units were found for parameters:\n"
-                f"countries {countries},\n"
-                f"category {category},\n"
-                f"spatial type {spatial_type},\n"
-                f"scale {scale},\n"
-                f"projection {projection},\n"
-                f"year {year}"
+                f'No units were found for parameters:\n'
+                f'countries {countries},\n'
+                f'category {category},\n'
+                f'spatial type {spatial_type},\n'
+                f'scale {scale},\n'
+                f'projection {projection},\n'
+                f'year {year}'
             )
             raise ValueError
         to_do = [
@@ -739,8 +634,7 @@ class UrbanAudit(ThemeParser):
         spatial_type: Literal['LB'] = 'LB',
         projection: Projection = '4326',
         year: Optional[str] = None,
-    ) -> list[GeoJSON] | gpd.GeoDataFrame:
-        ...
+    ) -> list[GeoJSON] | gpd.GeoDataFrame: ...
 
     @overload
     def get(
@@ -752,8 +646,7 @@ class UrbanAudit(ThemeParser):
         projection: Projection = '4326',
         scale: Scale = '100K',
         year: Optional[str] = None,
-    ) -> list[GeoJSON] | gpd.GeoDataFrame:
-        ...
+    ) -> list[GeoJSON] | gpd.GeoDataFrame: ...
 
     def get(
         self,
@@ -763,19 +656,14 @@ class UrbanAudit(ThemeParser):
         category: Optional[UrbanAuditCategory] = None,
         projection: str = '4326',
         scale: str = '100K',
-        year: Optional[str] = None
+        year: Optional[str] = None,
     ) -> list[GeoJSON] | gpd.GeoDataFrame:
         if isinstance(countries, str):
             countries = [countries]
         if year is None:
             year = self.default_dataset.year
         coro = self._get_many(
-            countries,
-            category,
-            spatial_type,
-            scale,
-            projection,
-            year
+            countries, category, spatial_type, scale, projection, year
         )
         geojson = run_async(coro)
         if GEOPANDAS_AVAILABLE:
@@ -802,10 +690,7 @@ class Dataset:
         # Datetime from gisco services has schema day/month/year
         # e.g. 01/12/2003
         return datetime.datetime(
-            *map(
-                int,
-                self.properties[Property.DATE.value].split('/')[::-1]
-            )  # type: ignore
+            *map(int, self.properties[Property.DATE.value].split('/')[::-1])  # type: ignore
         )
 
     @property
@@ -814,9 +699,7 @@ class Dataset:
 
     @property
     def title(self) -> Optional[str]:
-        return self.properties.get(
-            Property.TITLE.value, None
-        )
+        return self.properties.get(Property.TITLE.value, None)
 
     @property
     def title_multilingual(self) -> Optional[TitleMultilingual]:
@@ -843,46 +726,29 @@ class Dataset:
         return self.get_packages()
 
     def get_documentation(self) -> Optional[Documentation]:
-        documentation = self.properties.get(
-            Property.DOCUMENTATION.value, None
-        )
+        documentation = self.properties.get(Property.DOCUMENTATION.value, None)
         if documentation is None:
             return None
-        return Documentation(
-            self,
-            documentation
-        )
+        return Documentation(self, documentation)
 
     def get_packages(self) -> Optional[Packages]:
         # TODO: Maybe improve this somehow later on?
-        packages = self.properties.get(
-            Property.PACKAGES.value, None
-        )
+        packages = self.properties.get(Property.PACKAGES.value, None)
         if packages is None:
             return None
-        return run_async(
-            get_param(self.theme_parser.name, packages)
-        )
+        return run_async(get_param(self.theme_parser.name, packages))
 
     def get_metadata(self) -> Optional[Metadata]:
         # We do an isinstance check because it was possible that
         # the value was set before, metadata could be stored
         # by async lru cache.
-        metadata_props = self.properties.get(
-            Property.METADATA.value, None
-        )
+        metadata_props = self.properties.get(Property.METADATA.value, None)
         if metadata_props is None:
             return None
         if not isinstance(metadata_props['pdf'], MetadataFile):
-            metadata_props['pdf'] = PDF(
-                metadata_props['pdf'],
-                dataset=self
-            )
+            metadata_props['pdf'] = PDF(metadata_props['pdf'], dataset=self)
         if not isinstance(metadata_props['xml'], MetadataFile):
-            metadata_props['xml'] = XML(
-                metadata_props['xml'],
-                dataset=self
-            )
+            metadata_props['xml'] = XML(metadata_props['xml'], dataset=self)
         return metadata_props
 
     async def get_files(self) -> Files:
@@ -899,9 +765,7 @@ class Dataset:
         return self.properties[property]
 
     def get_file_name_from_stem(
-        self,
-        file_format: str,
-        file_stem: str
+        self, file_format: str, file_stem: str
     ) -> Optional[str]:
         json_ = self.files[file_format]
         for value in json_:
@@ -918,12 +782,11 @@ class Dataset:
         self,
         *args: Optional[str],
         file_format: str,
-        out_dir: Optional[FilePath]
+        out_dir: Optional[FilePath],
     ) -> Optional[GeoJSON | gpd.GeoDataFrame]:
         if out_dir is None and file_format != 'geojson':
             raise ValueError(
-                'out_dir can only be none ',
-                'if the file format is geojson.'
+                'out_dir can only be none ', 'if the file format is geojson.'
             )
         if (
             out_dir is None
@@ -932,7 +795,7 @@ class Dataset:
         ):
             raise ValueError(
                 'Geopandas needs to be installed if out_dir is not provided ',
-                'and the file_format is geojson.'
+                'and the file_format is geojson.',
             )
         # args[1:] to not consider the first part of the file name.
         # the reason this is done it's because the naming is inconsistent
@@ -942,18 +805,14 @@ class Dataset:
         file_stem_upper = file_stem.upper()
         file_name = self.get_file_name_from_stem(file_format, file_stem_upper)
         if file_name is None:
-            to_choose_from = '\n'.join(
-                self.files[file_format.lower()]
-            )
+            to_choose_from = '\n'.join(self.files[file_format.lower()])
             raise ValueError(
-                f'No file found for {file_stem_upper}\n' +
-                f"Available to choose from:\n{to_choose_from}"
+                f'No file found for {file_stem_upper}\n'
+                + f'Available to choose from:\n{to_choose_from}'
             )
 
         content = run_async(
-            get_file(
-                self.theme_parser.name, file_format, file_name
-            )
+            get_file(self.theme_parser.name, file_format, file_name)
         )
 
         if out_dir is not None:
@@ -965,7 +824,7 @@ class Dataset:
                 GeoJSON,
                 run_async(
                     get_param(self.theme_parser.name, file_format, file_name)
-                )
+                ),
             )
             if GEOPANDAS_AVAILABLE and file_format == 'geojson':
                 return gdf_from_geojson(coro)

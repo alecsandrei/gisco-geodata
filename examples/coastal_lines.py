@@ -12,7 +12,7 @@ if GEOPANDAS_AVAILABLE:
 
 
 OUT_DIR = Path(
-    os.path.normpath(os.path.expanduser("~/Desktop"))
+    os.path.normpath(os.path.expanduser('~/Desktop'))
 )  # Desktop path
 
 
@@ -20,9 +20,7 @@ def get_gdf():
     # Get as GeoJSON/Geodataframe.
     coastal_lines = CoastalLines()
     return coastal_lines.download(
-        spatial_type='RG',
-        scale='20M',
-        projection='4326'
+        spatial_type='RG', scale='20M', projection='4326'
     )
 
 
@@ -34,7 +32,7 @@ def get():
         spatial_type='RG',
         file_format='shp',
         scale='20M',
-        projection='4326'
+        projection='4326',
     )
 
 

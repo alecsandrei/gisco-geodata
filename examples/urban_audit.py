@@ -1,8 +1,5 @@
 from gisco_geodata.theme import GEOPANDAS_AVAILABLE
-from gisco_geodata import (
-    UrbanAudit,
-    set_httpx_args
-)
+from gisco_geodata import UrbanAudit, set_httpx_args
 
 if GEOPANDAS_AVAILABLE:
     import matplotlib.pyplot as plt
@@ -11,11 +8,7 @@ if GEOPANDAS_AVAILABLE:
 def get_cities():
     """Choose two countries."""
     countries = UrbanAudit()
-    return countries.get(
-        spatial_type='RG',
-        projection='4326',
-        category='C'
-    )
+    return countries.get(spatial_type='RG', projection='4326', category='C')
 
 
 def get_functional_urban_areas():
@@ -25,7 +18,7 @@ def get_functional_urban_areas():
         spatial_type='RG',
         countries=['IT', 'RO'],
         projection='4326',
-        category='F'
+        category='F',
     )
 
 

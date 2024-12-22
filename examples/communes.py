@@ -13,7 +13,7 @@ if GEOPANDAS_AVAILABLE:
 
 
 OUT_DIR = Path(
-    os.path.normpath(os.path.expanduser("~/Desktop"))
+    os.path.normpath(os.path.expanduser('~/Desktop'))
 )  # Desktop path
 
 
@@ -26,7 +26,7 @@ def get_lines():
         out_dir=OUT_DIR,
         spatial_type='BN',
         projection='4326',
-        year='2004'
+        year='2004',
     )
 
 
@@ -39,7 +39,7 @@ def get_polygons():
         spatial_type='RG',
         scale='01M',
         projection='4326',
-        year='2016'
+        year='2016',
     )
 
 

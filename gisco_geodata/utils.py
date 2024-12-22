@@ -38,9 +38,7 @@ def geopandas_is_available() -> bool:
     return is_package_installed('geopandas')
 
 
-def gdf_from_geojson(
-    geojsons: GeoJSON | Sequence[GeoJSON]
-) -> gpd.GeoDataFrame:
+def gdf_from_geojson(geojsons: GeoJSON | Sequence[GeoJSON]) -> gpd.GeoDataFrame:
     """Created a GeoDataFrame from GeoJSON.
 
     Args:
@@ -57,17 +55,20 @@ def gdf_from_geojson(
     if isinstance(geojsons, dict):
         return gpd.GeoDataFrame.from_features(
             features=geojsons['features'],
-            crs=geojsons['crs']['properties']['name']
+            crs=geojsons['crs']['properties']['name'],
         )
     elif isinstance(geojsons, Sequence):
         return cast(
             gpd.GeoDataFrame,
-            pd.concat([
-                gpd.GeoDataFrame.from_features(
-                    features=geojson['features'],
-                    crs=geojson['crs']['properties']['name']
-                ) for geojson in geojsons
-            ])
+            pd.concat(
+                [
+                    gpd.GeoDataFrame.from_features(
+                        features=geojson['features'],
+                        crs=geojson['crs']['properties']['name'],
+                    )
+                    for geojson in geojsons
+                ]
+            ),
         )
     else:
         raise ValueError(f'Wrong argument {geojsons}')
@@ -77,7 +78,7 @@ _T = TypeVar('_T')
 
 
 async def handle_completed_requests(
-    coros: Iterator[asyncio.futures.Future[_T]]
+    coros: Iterator[asyncio.futures.Future[_T]],
 ) -> list[_T]:
     json = []
     for coro in coros:
@@ -93,9 +94,7 @@ async def handle_completed_requests(
 
 
 def async_retry(
-    on: Type[Exception] = Exception,
-    retries: int = 50,
-    delay: float = 0.5
+    on: Type[Exception] = Exception, retries: int = 50, delay: float = 0.5
 ):
     """Wraps async functions into try/except blocks.
 
@@ -103,8 +102,9 @@ def async_retry(
         retries: The number of retries.
         delay: The time delay in seconds between each retry.
     """
+
     def decorator(
-        func: Callable[..., Coroutine[Any, Any, _T]]
+        func: Callable[..., Coroutine[Any, Any, _T]],
     ) -> Callable[..., Coroutine[Any, Any, _T]]:
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
@@ -116,16 +116,16 @@ def async_retry(
                     await asyncio.sleep(delay)
                     attempts += 1
             raise RuntimeError(
-                f"Function {func.__name__} failed after {retries} retries."
+                f'Function {func.__name__} failed after {retries} retries.'
             )
+
         return wrapper
+
     return decorator
 
 
 def retry(
-    on: Type[Exception] = Exception,
-    retries: int = 50,
-    delay: float = 0.5
+    on: Type[Exception] = Exception, retries: int = 50, delay: float = 0.5
 ):
     """Wraps functions into try/except blocks.
 
@@ -134,6 +134,7 @@ def retry(
         retries: The number of retries.
         delay: The time delay in seconds between each retry.
     """
+
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
@@ -145,9 +146,11 @@ def retry(
                     time.sleep(delay)
                     attempts += 1
             raise RuntimeError(
-                f"Function {func.__name__} failed after {retries} retries."
+                f'Function {func.__name__} failed after {retries} retries.'
             )
+
         return wrapper
+
     return decorator
 
 

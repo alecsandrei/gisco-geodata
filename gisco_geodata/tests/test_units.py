@@ -2,11 +2,7 @@ import asyncio
 
 import geopandas as gpd
 
-from gisco_geodata import (
-    Countries,
-    NUTS,
-    set_httpx_args
-)
+from gisco_geodata import Countries, NUTS, set_httpx_args
 from gisco_geodata import theme
 from gisco_geodata.utils import run_async
 
@@ -31,16 +27,8 @@ def test_get_countries():
 
 def test_get_nuts():
     setattr(theme, 'GEOPANDAS_AVAILABLE', False)
-    geojson = NUTS_.get(
-        countries='RO',
-        nuts_level='LEVL_0',
-        spatial_type='RG'
-    )
+    geojson = NUTS_.get(countries='RO', nuts_level='LEVL_0', spatial_type='RG')
     assert isinstance(geojson, list)
     setattr(theme, 'GEOPANDAS_AVAILABLE', True)
-    geojson = NUTS_.get(
-        countries='RO',
-        nuts_level='LEVL_0',
-        spatial_type='RG'
-    )
+    geojson = NUTS_.get(countries='RO', nuts_level='LEVL_0', spatial_type='RG')
     assert isinstance(geojson, gpd.GeoDataFrame)

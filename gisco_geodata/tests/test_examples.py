@@ -17,9 +17,7 @@ def test_examples():
         for py in module.rglob('*.py'):
             if py.stem.startswith('__'):
                 continue
-            module = importlib.util.spec_from_file_location(
-                py.stem, py
-            )
+            module = importlib.util.spec_from_file_location(py.stem, py)
             examples = importlib.util.module_from_spec(module)
             module.loader.exec_module(examples)
             setattr(examples, 'OUT_DIR', temp_dir)

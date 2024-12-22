@@ -14,7 +14,7 @@ if GEOPANDAS_AVAILABLE:
 
 
 OUT_DIR = Path(
-    os.path.normpath(os.path.expanduser("~/Desktop"))
+    os.path.normpath(os.path.expanduser('~/Desktop'))
 )  # Desktop path
 
 
@@ -36,7 +36,7 @@ def get():
         scale='01M',
         spatial_type='RG',
         projection='4326',
-        year='2016'
+        year='2016',
     )
 
 

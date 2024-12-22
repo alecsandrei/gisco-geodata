@@ -1,21 +1,14 @@
 from __future__ import annotations
 
 from urllib.parse import urljoin
-from typing import (
-    Any,
-    overload,
-    Literal
-)
+from typing import Any, overload, Literal
 from functools import lru_cache
 
 import httpx
 from cache import AsyncLRU
 
 from .typing import JSON
-from .utils import (
-    async_retry,
-    retry
-)
+from .utils import async_retry, retry
 
 
 URL = 'https://gisco-services.ec.europa.eu/distribution/v2/'
@@ -63,28 +56,20 @@ async def get_file(theme: str, file_format: str, file: str) -> bytes:
 
 @overload
 async def get_param(
-    theme: str,
-    *params: str,
-    return_type: Literal['bytes']
-) -> bytes:
-    ...
+    theme: str, *params: str, return_type: Literal['bytes']
+) -> bytes: ...
 
 
 @overload
 async def get_param(
-    theme: str,
-    *params: str,
-    return_type: Literal['json'] = 'json'
-) -> JSON:
-    ...
+    theme: str, *params: str, return_type: Literal['json'] = 'json'
+) -> JSON: ...
 
 
 @AsyncLRU()
 @async_retry(on=httpx.HTTPStatusError)
 async def get_param(
-    theme: str,
-    *params: str,
-    return_type: Literal['bytes', 'json'] = 'json'
+    theme: str, *params: str, return_type: Literal['bytes', 'json'] = 'json'
 ) -> JSON | bytes:
     async with httpx.AsyncClient(**HTTPX_KWARGS) as client:
         resp = await client.get(

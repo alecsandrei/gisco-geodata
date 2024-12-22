@@ -1,9 +1,5 @@
 from gisco_geodata.theme import GEOPANDAS_AVAILABLE
-from gisco_geodata import (
-    NUTS,
-    set_httpx_args,
-    set_semaphore_value
-)
+from gisco_geodata import NUTS, set_httpx_args, set_semaphore_value
 
 if GEOPANDAS_AVAILABLE:
     import matplotlib.pyplot as plt
@@ -16,7 +12,7 @@ def get_countries_subset():
         countries=['IT', 'RO'],
         projection='4326',
         scale='20M',
-        nuts_level='LEVL_0'
+        nuts_level='LEVL_0',
     )
 
 
@@ -24,21 +20,14 @@ def get_countries_polygons():
     """Get all countries."""
     nuts = NUTS()
     return nuts.get(
-        spatial_type='RG',
-        projection='4326',
-        scale='20M',
-        nuts_level='LEVL_0'
+        spatial_type='RG', projection='4326', scale='20M', nuts_level='LEVL_0'
     )
 
 
 def get_countries_points():
     """Get all countries."""
     nuts = NUTS()
-    return nuts.get(
-        spatial_type='LB',
-        projection='4326',
-        nuts_level='LEVL_0'
-    )
+    return nuts.get(spatial_type='LB', projection='4326', nuts_level='LEVL_0')
 
 
 def get_regions_polygons():
