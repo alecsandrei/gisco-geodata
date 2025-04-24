@@ -1,29 +1,30 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import (
-    Coroutine,
-    Sequence,
-    Callable,
-    Iterator,
-)
+import functools
 import importlib.util
 import threading
 import time
-import functools
+from collections.abc import (
+    Callable,
+    Coroutine,
+    Iterator,
+    Sequence,
+)
 from typing import (
     TYPE_CHECKING,
     Any,
-    cast,
     Type,
     TypeVar,
+    cast,
 )
 
 import httpx
 
 if TYPE_CHECKING:
-    from gisco_geodata.theme import GeoJSON
     import geopandas as gpd
+
+    from gisco_geodata.theme import GeoJSON
 
 T = TypeVar('T')
 
@@ -38,6 +39,10 @@ def is_package_installed(name: str) -> bool:
 
 def geopandas_is_available() -> bool:
     return is_package_installed('geopandas')
+
+
+def pandas_is_available() -> bool:
+    return is_package_installed('pandas')
 
 
 def gdf_from_geojson(geojsons: GeoJSON | Sequence[GeoJSON]) -> gpd.GeoDataFrame:

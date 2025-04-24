@@ -1,15 +1,14 @@
 from __future__ import annotations
 
-from urllib.parse import urljoin
-from typing import Any, overload, Literal
 from functools import lru_cache
+from typing import Any, Literal, overload
+from urllib.parse import urljoin
 
 import httpx
 from cache import AsyncLRU
 
 from .typing import JSON
 from .utils import async_retry, retry
-
 
 URL = 'https://gisco-services.ec.europa.eu/distribution/v2/'
 THEMES_URL = urljoin(URL, 'themes.json')

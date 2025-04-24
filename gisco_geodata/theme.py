@@ -1,23 +1,17 @@
 from __future__ import annotations
 
 import asyncio
+import datetime
+import os
+import sys
+import xml.etree.ElementTree as ET
 from collections.abc import Sequence
 from dataclasses import dataclass
-import datetime
 from enum import Enum
 from functools import partial
-import os
 from pathlib import Path
-import sys
-from typing import Any, Literal, Optional, overload, cast
-import xml.etree.ElementTree as ET
+from typing import Any, Literal, Optional, cast, overload
 
-from .utils import (
-    geopandas_is_available,
-    handle_completed_requests,
-    gdf_from_geojson,
-    run_async,
-)
 from .parser import (
     get_datasets,
     get_file,
@@ -25,31 +19,41 @@ from .parser import (
     get_themes,
 )
 from .typing import (
-    FilePath,
-    SpatialType,
+    JSON,
     CountryBoundary,
-    Scale,
-    Projection,
-    NUTSLevel,
+    FileFormat,
+    FilePath,
+    Files,
     GeoJSON,
+    Metadata,
+    NUTSLevel,
+    Packages,
+    Projection,
+    Scale,
+    SpatialType,
+    TitleMultilingual,
     Units,
     UrbanAuditCategory,
-    Metadata,
-    FileFormat,
-    JSON,
-    TitleMultilingual,
-    Packages,
-    Files,
+)
+from .utils import (
+    gdf_from_geojson,
+    geopandas_is_available,
+    handle_completed_requests,
+    pandas_is_available,
+    run_async,
 )
 
 PLATFORM = sys.platform
 SEMAPHORE_VALUE = 50
 GEOPANDAS_AVAILABLE = geopandas_is_available()
+PANDAS_AVAILABLE = pandas_is_available()
 
 
 if GEOPANDAS_AVAILABLE:
     import geopandas as gpd
 
+if PANDAS_AVAILABLE:
+    import pandas as pd
 
 _UNITS_REGION = '{unit}-region-{scale}-{projection}-{year}.geojson'
 _UNITS_LABEL = '{unit}-label-{projection}-{year}.geojson'
@@ -135,6 +139,7 @@ class Theme(Enum):
     LOCAL_ADMINISTRATIVE_UNITS = 'lau'
     NUTS = 'nuts'
     URBAN_AUDIT = 'urau'
+    POSTAL_CODES = 'pcode'
 
 
 @dataclass
@@ -270,6 +275,7 @@ class ThemeParser:
             nuts_level,
             **kwargs,
             file_format=file_format,
+            return_type='json',
             out_dir=out_dir,
         )
 
@@ -299,6 +305,30 @@ class LocalAdministrativeUnits(ThemeParser):
         if name:
             self.name = name
         super().__init__(self.name)
+
+
+class PostalCodes(ThemeParser):
+    name = Theme.POSTAL_CODES.value
+
+    def __init__(self, name: Optional[str] = None):
+        if name:
+            self.name = name
+        super().__init__(self.name)
+
+    def country_ids(self, year: str) -> list[str] | pd.Series:
+        ids = (
+            cast(
+                bytes,
+                self.get_dataset(year)._download(
+                    'CNTR', 'AT', year, file_format='csv', return_type='bytes'
+                ),
+            )
+            .decode('UTF-8')
+            .splitlines()
+        )
+        if PANDAS_AVAILABLE:
+            return pd.Series(data=ids[1:], name=ids[0])
+        return ids
 
 
 class Countries(ThemeParser):
@@ -339,7 +369,7 @@ class Countries(ThemeParser):
             )
         else:
             raise ValueError(
-                f'Wrong parameter {spatial_type}.' 'Allowed are "RG" and "LB".'
+                f'Wrong parameter {spatial_type}.Allowed are "RG" and "LB".'
             )
         try:
             async with semaphore:
@@ -455,7 +485,7 @@ class NUTS(ThemeParser):
             )
         else:
             raise ValueError(
-                f'Wrong parameter {spatial_type}.' 'Allowed are "RG" and "LB".'
+                f'Wrong parameter {spatial_type}.Allowed are "RG" and "LB".'
             )
         try:
             async with semaphore:
@@ -587,7 +617,7 @@ class UrbanAudit(ThemeParser):
             )
         else:
             raise ValueError(
-                f'Wrong parameter {spatial_type}.' 'Allowed are "RG" and "LB".'
+                f'Wrong parameter {spatial_type}.Allowed are "RG" and "LB".'
             )
         try:
             async with semaphore:
@@ -782,11 +812,13 @@ class Dataset:
         self,
         *args: Optional[str],
         file_format: str,
-        out_dir: Optional[FilePath],
-    ) -> Optional[GeoJSON | gpd.GeoDataFrame]:
-        if out_dir is None and file_format != 'geojson':
+        out_dir: Optional[FilePath] = None,
+        return_type: Literal['bytes', 'json'] = 'json',
+    ) -> Optional[GeoJSON | JSON | gpd.GeoDataFrame | bytes]:
+        valid_formats = ('csv', 'geojson')
+        if out_dir is None and file_format not in valid_formats:
             raise ValueError(
-                'out_dir can only be none ', 'if the file format is geojson.'
+                f'out_dir can only be none if the file format is in {valid_formats}.'
             )
         if (
             out_dir is None
@@ -794,7 +826,7 @@ class Dataset:
             and not GEOPANDAS_AVAILABLE
         ):
             raise ValueError(
-                'Geopandas needs to be installed if out_dir is not provided ',
+                'Geopandas needs to be installed if out_dir is not provided '
                 'and the file_format is geojson.',
             )
         # args[1:] to not consider the first part of the file name.
@@ -808,25 +840,27 @@ class Dataset:
             to_choose_from = '\n'.join(self.files[file_format.lower()])
             raise ValueError(
                 f'No file found for {file_stem_upper}\n'
-                + f'Available to choose from:\n{to_choose_from}'
+                f'Available to choose from:\n{to_choose_from}'
             )
 
-        content = run_async(
-            get_file(self.theme_parser.name, file_format, file_name)
-        )
-
         if out_dir is not None:
+            content = run_async(
+                get_file(self.theme_parser.name, file_format, file_name)
+            )
             with open(Path(out_dir) / file_name, 'wb') as f:
                 f.write(content)
             return None
         else:
-            coro = cast(
-                GeoJSON,
-                run_async(
-                    get_param(self.theme_parser.name, file_format, file_name)
-                ),
+            coro = run_async(
+                get_param(
+                    self.theme_parser.name,
+                    file_format,
+                    file_name,
+                    return_type=return_type,
+                )
             )
+
             if GEOPANDAS_AVAILABLE and file_format == 'geojson':
-                return gdf_from_geojson(coro)
+                return gdf_from_geojson(cast(GeoJSON, coro))
             else:
                 return coro
