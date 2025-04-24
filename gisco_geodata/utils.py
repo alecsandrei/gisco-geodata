@@ -1,7 +1,24 @@
 from __future__ import annotations
 
 import asyncio
+<<<<<<< HEAD
 import functools
+=======
+<<<<<<< Updated upstream
+=======
+import functools
+import importlib.util
+import os
+import threading
+import time
+>>>>>>> Stashed changes
+from collections.abc import (
+    Coroutine,
+    Sequence,
+    Callable,
+    Iterator,
+)
+>>>>>>> 0649080 (add github publish yml)
 import importlib.util
 import threading
 import time
@@ -27,6 +44,10 @@ if TYPE_CHECKING:
     from gisco_geodata.theme import GeoJSON
 
 T = TypeVar('T')
+
+
+def is_pytest_running():
+    return 'PYTEST_CURRENT_TEST' in os.environ
 
 
 def is_package_installed(name: str) -> bool:
