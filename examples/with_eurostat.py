@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from eurostat import get_data_df, get_toc_df, set_requests_args
 
 from gisco_geodata import NUTS, set_httpx_args
+from gisco_geodata.utils import is_pytest_running
 
 
 def get_plot():
@@ -49,7 +50,8 @@ def get_plot():
     plt.xlim(-25, 47)
     plt.ylim(30, 75)
     plt.tight_layout()
-    plt.show()
+    if not is_pytest_running():
+        plt.show()
 
 
 if __name__ == '__main__':
