@@ -1,6 +1,6 @@
 [project]
 name = "gisco-geodata"
-version = "0.1.3.dev0"
+version = "0.1.3"
 dependencies = ["httpx", "async-cache"]
 description = "GISCO Geodata is a Python package that provides access to the European Commission's GISCO geospatial data."
 readme = "README.md"
