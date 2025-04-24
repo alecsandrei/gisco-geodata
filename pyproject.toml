@@ -45,6 +45,8 @@ dev = [
     "geopandas",
     "ruff",
     "mypy",
+    "mapclassify>=2.8.1",
+
 ]
 geo = ["geopandas"]
 
